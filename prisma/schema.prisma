@@ -1,0 +1,194 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+// Get a free hosted Postgres database in seconds: `npx create-db`
+
+generator client {
+  provider = "prisma-client"
+  output   = "../src/generated/prisma"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+// ──────────────────────────────────────────────
+// User — Patient profile
+// ──────────────────────────────────────────────
+model User {
+  id                 String   @id @default(cuid())
+  clerkId            String   @unique
+  name               String
+  email              String   @unique
+  birthDate          DateTime?
+  sex                String? // "male" | "female"
+  height             Float?  // cm
+  weight             Float?  // kg (encrypted)
+  activityLevel      String? // "sedentary" | "light" | "moderate" | "active" | "very_active"
+  goal               String? // "lose" | "gain" | "maintain"
+  bmr                Float?  // calculated
+  tdee               Float?  // calculated
+  dailyKcalTarget    Float?  // calculated
+  restrictions       String? // JSON (encrypted)
+  preferences        String? // JSON
+  conditions         String? // JSON (encrypted)
+  onboardingCompleted Boolean @default(false)
+  createdAt          DateTime @default(now())
+  updatedAt          DateTime @updatedAt
+
+  dietPlans    DietPlan[]
+  mealLogs     MealLog[]
+  weightLogs   WeightLog[]
+  chatMessages ChatMessage[]
+
+  @@index([clerkId])
+  @@index([email])
+}
+
+// ──────────────────────────────────────────────
+// DietPlan — Active diet plan
+// ──────────────────────────────────────────────
+model DietPlan {
+  id        String   @id @default(cuid())
+  userId    String
+  name      String
+  totalKcal Float
+  isActive  Boolean  @default(false)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  user   User             @relation(fields: [userId], references: [id])
+  meals  Meal[]
+  review DietPlanReview?
+
+  @@index([userId])
+  @@index([isActive])
+}
+
+// ──────────────────────────────────────────────
+// DietPlanReview — Review before activation
+// ──────────────────────────────────────────────
+model DietPlanReview {
+  id         String   @id @default(cuid())
+  dietPlanId String   @unique
+  status     String   @default("pending") // "pending" | "approved" | "rejected"
+  createdAt  DateTime @default(now())
+
+  dietPlan DietPlan @relation(fields: [dietPlanId], references: [id])
+}
+
+// ──────────────────────────────────────────────
+// Meal — Meal within a plan
+// ──────────────────────────────────────────────
+model Meal {
+  id          String   @id @default(cuid())
+  dietPlanId  String
+  name        String
+  kcalTarget  Float
+  windowStart Int      // hour (0-23)
+  windowEnd   Int      // hour (0-23)
+  order       Int
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  dietPlan  DietPlan   @relation(fields: [dietPlanId], references: [id])
+  mealItems MealItem[]
+  mealLogs  MealLog[]
+
+  @@index([dietPlanId])
+}
+
+// ──────────────────────────────────────────────
+// MealItem — Food item within a meal
+// ──────────────────────────────────────────────
+model MealItem {
+  id       String @id @default(cuid())
+  mealId   String
+  foodId   String? // references TBCA
+  name     String
+  quantity Float
+  unit     String // "g" | "ml" | "unidade"
+  kcal     Float
+  protein  Float
+  carbs    Float
+  fat      Float
+
+  meal Meal @relation(fields: [mealId], references: [id])
+
+  @@index([mealId])
+}
+
+// ──────────────────────────────────────────────
+// MealLog — What the patient actually ate
+// ──────────────────────────────────────────────
+model MealLog {
+  id            String    @id @default(cuid())
+  userId        String
+  mealId        String?
+  date          DateTime
+  status        String    @default("eaten") // "eaten" | "skipped" | "out_of_window"
+  rawText       String?   // original text (encrypted)
+  parsedKcal    Float?
+  parsedProtein Float?
+  parsedCarbs   Float?
+  parsedFat     Float?
+  conformant    Boolean?  // within ±10% of target
+  createdAt     DateTime  @default(now())
+
+  user User  @relation(fields: [userId], references: [id])
+  meal Meal? @relation(fields: [mealId], references: [id])
+
+  @@index([userId])
+  @@index([date])
+}
+
+// ──────────────────────────────────────────────
+// WeightLog — Weight tracking
+// ──────────────────────────────────────────────
+model WeightLog {
+  id        String   @id @default(cuid())
+  userId    String
+  weight    Float    // encrypted
+  date      DateTime
+  createdAt DateTime @default(now())
+
+  user User @relation(fields: [userId], references: [id])
+
+  @@index([userId])
+  @@index([date])
+}
+
+// ──────────────────────────────────────────────
+// ChatMessage — AI chat messages
+// ──────────────────────────────────────────────
+model ChatMessage {
+  id        String   @id @default(cuid())
+  userId    String
+  role      String   // "user" | "assistant"
+  content   String
+  sessionId String
+  createdAt DateTime @default(now())
+
+  user User @relation(fields: [userId], references: [id])
+
+  @@index([userId])
+  @@index([sessionId])
+}
+
+// ──────────────────────────────────────────────
+// TBACFood — Brazilian food composition table
+// ──────────────────────────────────────────────
+model TBACFood {
+  id              String  @id @default(cuid())
+  name            String
+  category        String?
+  kcalPer100g     Float
+  proteinPer100g  Float
+  carbsPer100g    Float
+  fatPer100g      Float
+  fiberPer100g    Float?
+  portionDefault  Float?  // default portion in grams
+  portionUnit     String? // "g" | "ml" | "unidade"
+
+  @@index([name])
+}

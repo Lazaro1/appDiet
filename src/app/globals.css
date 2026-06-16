@@ -1,26 +1,216 @@
 @import "tailwindcss";
+@import "tw-animate-css";
+@import "shadcn/tailwind.css";
 
-:root {
-  --background: #ffffff;
-  --foreground: #171717;
-}
+@custom-variant dark (&:is(.dark *));
+
+/* ============================================================
+   AppDiet Design System — Tailwind v4 Theme
+   Based on DESIGN-appdiet.md
+   ============================================================ */
 
 @theme inline {
+  /* --- Font --- */
+  --font-sans: "Plus Jakarta Sans", system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+  --font-mono: var(--font-geist-mono);
+  --font-heading: var(--font-sans);
+
+  /* --- Radius (base: 12px = 0.75rem) --- */
+  --radius-sm: 0.5rem;     /* 8px */
+  --radius-md: 0.75rem;    /* 12px */
+  --radius-lg: 1rem;       /* 16px */
+  --radius-xl: 1.25rem;    /* 20px */
+  --radius-2xl: 1.5rem;    /* 24px */
+  --radius-3xl: 2rem;      /* 32px */
+  --radius-4xl: 3rem;      /* 48px */
+
+  /* --- shadcn semantic colors (mapped to AppDiet tokens) --- */
   --color-background: var(--background);
   --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
+  --color-card: var(--card);
+  --color-card-foreground: var(--card-foreground);
+  --color-popover: var(--popover);
+  --color-popover-foreground: var(--popover-foreground);
+  --color-primary: var(--primary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-secondary: var(--secondary);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-muted: var(--muted);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-accent: var(--accent);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-destructive: var(--destructive);
+  --color-border: var(--border);
+  --color-input: var(--input);
+  --color-ring: var(--ring);
+
+  /* --- Sidebar (shadcn) --- */
+  --color-sidebar: var(--sidebar);
+  --color-sidebar-foreground: var(--sidebar-foreground);
+  --color-sidebar-primary: var(--sidebar-primary);
+  --color-sidebar-primary-foreground: var(--sidebar-primary-foreground);
+  --color-sidebar-accent: var(--sidebar-accent);
+  --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
+  --color-sidebar-border: var(--sidebar-border);
+  --color-sidebar-ring: var(--sidebar-ring);
+
+  /* --- Charts (shadcn) --- */
+  --color-chart-1: var(--chart-1);
+  --color-chart-2: var(--chart-2);
+  --color-chart-3: var(--chart-3);
+  --color-chart-4: var(--chart-4);
+  --color-chart-5: var(--chart-5);
+
+  /* --- AppDiet Extended Colors --- */
+  --color-ink: #1c1917;
+  --color-body: #44403c;
+  --color-hint: #a8a29e;
+  --color-canvas: #fffbf7;
+  --color-surface: #f5f0eb;
+  --color-surface-raised: #ede8e2;
+  --color-surface-dark: #1c1917;
+  --color-surface-dark-elevated: #292524;
+
+  --color-primary-hover: #0f766e;
+  --color-primary-active: #115e59;
+  --color-primary-soft: #ccfbf1;
+  --color-primary-subtle: #f0fdfa;
+
+  --color-accent-warm: #f97316;
+  --color-accent-warm-soft: #fff7ed;
+  --color-accent-warm-hover: #ea580c;
+
+  --color-accent-green: #22c55e;
+  --color-accent-green-soft: #f0fdf4;
+
+  --color-success: #16a34a;
+  --color-success-soft: #dcfce7;
+  --color-warning: #eab308;
+  --color-warning-soft: #fefce8;
+  --color-danger: #ef4444;
+  --color-danger-soft: #fef2f2;
+  --color-info: #0d9488;
+  --color-info-soft: #ccfbf1;
+
+  --color-signature-teal: #0d9488;
+  --color-signature-warm: #f97316;
+  --color-signature-cream: #fef3c7;
+  --color-signature-peach: #fed7aa;
+  --color-signature-sage: #d9f99d;
+
+  --color-border-strong: #d6d3d1;
+  --color-border-focus: #0d9488;
+
+  --color-on-primary: #ffffff;
+  --color-on-dark: #fafaf9;
+  --color-on-warm: #1c1917;
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
+/* ============================================================
+   Light Mode (default)
+   ============================================================ */
+:root {
+  /* --- shadcn semantic tokens --- */
+  --background: #fffbf7;           /* canvas */
+  --foreground: #1c1917;            /* ink */
+  --card: #ffffff;                  /* white card on warm bg */
+  --card-foreground: #1c1917;       /* ink */
+  --popover: #ffffff;
+  --popover-foreground: #1c1917;
+  --primary: #0d9488;               /* teal */
+  --primary-foreground: #ffffff;     /* on-primary */
+  --secondary: #f5f0eb;             /* surface */
+  --secondary-foreground: #1c1917;  /* ink */
+  --muted: #f5f0eb;                 /* surface */
+  --muted-foreground: #78716c;      /* muted */
+  --accent: #f5f0eb;                /* surface */
+  --accent-foreground: #1c1917;     /* ink */
+  --destructive: #ef4444;           /* danger */
+  --border: #e7e5e4;               /* border */
+  --input: #e7e5e4;                 /* border */
+  --ring: #0d9488;                  /* primary */
+
+  /* --- Sidebar --- */
+  --sidebar: #fffbf7;
+  --sidebar-foreground: #1c1917;
+  --sidebar-primary: #0d9488;
+  --sidebar-primary-foreground: #ffffff;
+  --sidebar-accent: #f5f0eb;
+  --sidebar-accent-foreground: #1c1917;
+  --sidebar-border: #e7e5e4;
+  --sidebar-ring: #0d9488;
+
+  /* --- Charts --- */
+  --chart-1: #0d9488;   /* teal */
+  --chart-2: #f97316;   /* warm */
+  --chart-3: #22c55e;   /* green */
+  --chart-4: #eab308;   /* yellow */
+  --chart-5: #78716c;   /* muted */
+}
+
+/* ============================================================
+   Dark Mode (future — tokens defined, not active)
+   ============================================================ */
+.dark {
+  --background: #1c1917;
+  --foreground: #fafaf9;
+  --card: #292524;
+  --card-foreground: #fafaf9;
+  --popover: #292524;
+  --popover-foreground: #fafaf9;
+  --primary: #2dd4bf;
+  --primary-foreground: #1c1917;
+  --secondary: #3f3a36;
+  --secondary-foreground: #fafaf9;
+  --muted: #3f3a36;
+  --muted-foreground: #a8a29e;
+  --accent: #3f3a36;
+  --accent-foreground: #fafaf9;
+  --destructive: #ef4444;
+  --border: #44403c;
+  --input: #44403c;
+  --ring: #2dd4bf;
+
+  --sidebar: #1c1917;
+  --sidebar-foreground: #fafaf9;
+  --sidebar-primary: #2dd4bf;
+  --sidebar-primary-foreground: #1c1917;
+  --sidebar-accent: #3f3a36;
+  --sidebar-accent-foreground: #fafaf9;
+  --sidebar-border: #44403c;
+  --sidebar-ring: #2dd4bf;
+
+  --chart-1: #2dd4bf;
+  --chart-2: #fb923c;
+  --chart-3: #4ade80;
+  --chart-4: #facc15;
+  --chart-5: #a8a29e;
+}
+
+/* ============================================================
+   Base Styles
+   ============================================================ */
+@layer base {
+  * {
+    @apply border-border outline-ring/50;
+  }
+  body {
+    @apply bg-background text-foreground;
+    font-feature-settings: "cv11", "ss01";
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+  }
+  html {
+    @apply font-sans;
   }
 }
 
-body {
-  background: var(--background);
-  color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+/* ============================================================
+   AppDiet Utility Classes
+   ============================================================ */
+@layer utilities {
+  /* Stat typography — tabular figures for calorie numbers */
+  .font-tabular-nums {
+    font-variant-numeric: tabular-nums;
+  }
 }
