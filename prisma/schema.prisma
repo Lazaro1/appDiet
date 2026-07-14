@@ -13,36 +13,79 @@ datasource db {
 }
 
 // ──────────────────────────────────────────────
+// Enums
+// ──────────────────────────────────────────────
+
+enum Sex {
+  male
+  female
+}
+
+enum ActivityLevel {
+  sedentary
+  light
+  moderate
+  active
+  very_active
+}
+
+enum Goal {
+  lose
+  gain
+  maintain
+}
+
+enum DietPlanReviewStatus {
+  pending
+  approved
+  rejected
+}
+
+enum MealLogStatus {
+  eaten
+  skipped
+  out_of_window
+}
+
+enum ChatRole {
+  user
+  assistant
+}
+
+enum PortionUnit {
+  g
+  ml
+  unidade
+}
+
+// ──────────────────────────────────────────────
 // User — Patient profile
 // ──────────────────────────────────────────────
 model User {
-  id                 String   @id @default(cuid())
-  clerkId            String   @unique
+  id                 String        @id @default(cuid())
+  clerkId            String        @unique
   name               String
-  email              String   @unique
+  email              String        @unique
   birthDate          DateTime?
-  sex                String? // "male" | "female"
-  height             Float?  // cm
-  weight             Float?  // kg (encrypted)
-  activityLevel      String? // "sedentary" | "light" | "moderate" | "active" | "very_active"
-  goal               String? // "lose" | "gain" | "maintain"
-  bmr                Float?  // calculated
-  tdee               Float?  // calculated
-  dailyKcalTarget    Float?  // calculated
-  restrictions       String? // JSON (encrypted)
-  preferences        String? // JSON
-  conditions         String? // JSON (encrypted)
-  onboardingCompleted Boolean @default(false)
-  createdAt          DateTime @default(now())
-  updatedAt          DateTime @updatedAt
+  sex                Sex?
+  height             Float?        // cm
+  weight             Float?        // kg (encrypted)
+  activityLevel      ActivityLevel?
+  goal               Goal?
+  bmr                Float?        // calculated
+  tdee               Float?        // calculated
+  dailyKcalTarget    Float?        // calculated
+  restrictions       String?       // JSON (encrypted)
+  preferences        Json?         // structured data
+  conditions         String?       // JSON (encrypted)
+  onboardingCompleted Boolean      @default(false)
+  createdAt          DateTime      @default(now())
+  updatedAt          DateTime      @updatedAt
 
   dietPlans    DietPlan[]
   mealLogs     MealLog[]
   weightLogs   WeightLog[]
   chatMessages ChatMessage[]
-
-  @@index([clerkId])
-  @@index([email])
 }
 
 // ──────────────────────────────────────────────
@@ -61,20 +104,19 @@ model DietPlan {
   meals  Meal[]
   review DietPlanReview?
 
-  @@index([userId])
-  @@index([isActive])
+  @@index([userId, isActive])
 }
 
 // ──────────────────────────────────────────────
 // DietPlanReview — Review before activation
 // ──────────────────────────────────────────────
 model DietPlanReview {
-  id         String   @id @default(cuid())
-  dietPlanId String   @unique
-  status     String   @default("pending") // "pending" | "approved" | "rejected"
-  createdAt  DateTime @default(now())
+  id         String              @id @default(cuid())
+  dietPlanId String              @unique
+  status     DietPlanReviewStatus @default(pending)
+  createdAt  DateTime            @default(now())
 
-  dietPlan DietPlan @relation(fields: [dietPlanId], references: [id])
+  dietPlan DietPlan @relation(fields: [dietPlanId], references: [id], onDelete: Cascade)
 }
 
 // ──────────────────────────────────────────────
@@ -91,29 +133,30 @@ model Meal {
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
 
-  dietPlan  DietPlan   @relation(fields: [dietPlanId], references: [id])
+  dietPlan  DietPlan   @relation(fields: [dietPlanId], references: [id], onDelete: Cascade)
   mealItems MealItem[]
   mealLogs  MealLog[]
 
-  @@index([dietPlanId])
+  @@index([dietPlanId, order])
 }
 
 // ──────────────────────────────────────────────
 // MealItem — Food item within a meal
 // ──────────────────────────────────────────────
 model MealItem {
-  id       String @id @default(cuid())
+  id       String      @id @default(cuid())
   mealId   String
-  foodId   String? // references TBCA
+  foodId   String?     // references TBCA
   name     String
   quantity Float
-  unit     String // "g" | "ml" | "unidade"
+  unit     PortionUnit
   kcal     Float
   protein  Float
   carbs    Float
   fat      Float
 
-  meal Meal @relation(fields: [mealId], references: [id])
+  meal Meal             @relation(fields: [mealId], references: [id], onDelete: Cascade)
+  food TBACFood?        @relation(fields: [foodId], references: [id])
 
   @@index([mealId])
 }
@@ -122,24 +165,23 @@ model MealItem {
 // MealLog — What the patient actually ate
 // ──────────────────────────────────────────────
 model MealLog {
-  id            String    @id @default(cuid())
+  id            String        @id @default(cuid())
   userId        String
   mealId        String?
   date          DateTime
-  status        String    @default("eaten") // "eaten" | "skipped" | "out_of_window"
-  rawText       String?   // original text (encrypted)
+  status        MealLogStatus @default(eaten)
+  rawText       String?       // original text (encrypted)
   parsedKcal    Float?
   parsedProtein Float?
   parsedCarbs   Float?
   parsedFat     Float?
-  conformant    Boolean?  // within ±10% of target
-  createdAt     DateTime  @default(now())
+  conformant    Boolean?      // within ±10% of target
+  createdAt     DateTime      @default(now())
 
   user User  @relation(fields: [userId], references: [id])
   meal Meal? @relation(fields: [mealId], references: [id])
 
-  @@index([userId])
-  @@index([date])
+  @@index([userId, date])
 }
 
 // ──────────────────────────────────────────────
@@ -154,8 +196,7 @@ model WeightLog {
 
   user User @relation(fields: [userId], references: [id])
 
-  @@index([userId])
-  @@index([date])
+  @@index([userId, date])
 }
 
 // ──────────────────────────────────────────────
@@ -164,22 +205,21 @@ model WeightLog {
 model ChatMessage {
   id        String   @id @default(cuid())
   userId    String
-  role      String   // "user" | "assistant"
+  role      ChatRole
   content   String
   sessionId String
   createdAt DateTime @default(now())
 
   user User @relation(fields: [userId], references: [id])
 
-  @@index([userId])
-  @@index([sessionId])
+  @@index([userId, sessionId, createdAt])
 }
 
 // ──────────────────────────────────────────────
 // TBACFood — Brazilian food composition table
 // ──────────────────────────────────────────────
 model TBACFood {
-  id              String  @id @default(cuid())
+  id              String      @id @default(cuid())
   name            String
   category        String?
   kcalPer100g     Float
@@ -187,8 +227,10 @@ model TBACFood {
   carbsPer100g    Float
   fatPer100g      Float
   fiberPer100g    Float?
-  portionDefault  Float?  // default portion in grams
-  portionUnit     String? // "g" | "ml" | "unidade"
+  portionDefault  Float?      // default portion in grams
+  portionUnit     PortionUnit?
+
+  mealItems MealItem[]
 
   @@index([name])
 }

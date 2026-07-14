@@ -25,14 +25,14 @@
 
 | # | Task | Status | Detalhes |
 |---|------|--------|---------|
-| 2.1 | Onboarding wizard (5 passos) | ⬜ Pendente | Step components + stepper + form state |
-| 2.2 | Dashboard (home) | ⬜ Pendente | Calorie bar, meal cards, stats, FAB |
-| 2.3 | Diet plan — criar/importar/revisar/ativar | ⬜ Pendente | AI parsing + review flow |
-| 2.4 | Meal logging — texto livre → IA → MealLog | ⬜ Pendente | Meal detail + log form |
-| 2.5 | Chat com IA (streaming SSE) | ⬜ Pendente | Chat window + OpenRouter integration |
-| 2.6 | Troca de alimentos | ⬜ Pendente | Swap button + bottom sheet + AI suggestions |
-| 2.7 | Progresso — gráficos semanais | ⬜ Pendente | Calorie bar semanal + adherence ring + weight chart |
-| 2.8 | Perfil — editar dados do paciente | ⬜ Pendente | Formulário de edição de perfil |
+| 2.1 | Onboarding wizard (5 passos) | ✅ Concluído | 5 step components + wizard page + server action + BMR/TDEE calculation + zod validation |
+| 2.2 | Dashboard (home) | ✅ Concluído | StatCards, CalorieBar, MealCards, FAB, empty state → /diet/new |
+| 2.3 | Diet plan — criar/importar/revisar/ativar | ✅ Concluído | /diet, /diet/new, /diet/[id] + APIs generate/import/activate |
+| 2.4 | Meal logging — texto livre → IA → MealLog | ✅ Concluído | /meals/[id] + POST log/skip + parseMeal |
+| 2.5 | Chat com IA (streaming SSE) | ✅ Concluído | Chat window + OpenRouter streaming + histórico por sessão |
+| 2.6 | Troca de alimentos | ✅ Concluído | Swap sheet + POST /api/diet/[id]/swap |
+| 2.7 | Progresso — gráficos semanais | ✅ Concluído | Chart.js + weekly summary + weight chart |
+| 2.8 | Perfil — editar dados do paciente | ✅ Concluído | Formulário de edição + recálculo BMR/TDEE |
 
 ---
 

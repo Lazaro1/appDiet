@@ -1,4 +1,5 @@
 import { cn } from "@/lib/utils"
+import { formatKcal, formatCalorieRemaining } from "@/lib/nutrition/format"
 
 interface CalorieBarProps {
   /** kcal consumed */
@@ -31,10 +32,7 @@ export function CalorieBar({
   const remaining = Math.abs(target - consumed)
   const fillColor = isOver ? "bg-accent-warm" : "bg-primary"
 
-  const formattedRemaining = remaining.toLocaleString("pt-BR")
-  const remainingText = isOver
-    ? `${formattedRemaining} kcal acima`
-    : `${formattedRemaining} kcal restantes`
+  const remainingText = formatCalorieRemaining(consumed, target)
 
   const showText = Boolean(label) || (showRemaining && target > 0)
 

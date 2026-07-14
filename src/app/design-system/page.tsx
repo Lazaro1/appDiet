@@ -915,7 +915,7 @@ export default function DesignSystemPage() {
       </main>
 
       {/* Bottom Nav (fixed) */}
-      <BottomNav items={navItems} activeHref="/" />
+      <BottomNav items={navItems} />
 
       {/* FAB */}
       <Fab onClick={() => {}} label="Registrar refeição" />

@@ -13,11 +13,9 @@ interface BottomNavItem {
 interface BottomNavProps {
   /** Navigation items — typically 5 for a tab bar */
   items: BottomNavItem[]
-  /** Currently active href pattern */
-  activeHref: string
 }
 
-export function BottomNav({ items, activeHref }: BottomNavProps) {
+export function BottomNav({ items }: BottomNavProps) {
   const pathname = usePathname()
 
   return (

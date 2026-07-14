@@ -1,7 +1,6 @@
 import type { Metadata } from "next";
 import { Plus_Jakarta_Sans } from "next/font/google";
-import { ClerkProvider } from "@clerk/nextjs";
-import { ptBR } from "@clerk/localizations";
+import { AuthProvider } from "@/lib/auth";
 import "./globals.css";
 
 const plusJakartaSans = Plus_Jakarta_Sans({
@@ -22,10 +21,10 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <ClerkProvider localization={ptBR}>
+    <AuthProvider>
       <html lang="pt-BR" className={`${plusJakartaSans.variable} h-full antialiased`}>
         <body className="min-h-full flex flex-col font-sans">{children}</body>
       </html>
-    </ClerkProvider>
+    </AuthProvider>
   );
 }

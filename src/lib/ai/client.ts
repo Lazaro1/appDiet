@@ -1,1 +1,1 @@
-// OpenRouter client — TODO
+export { getAIProvider, resetAIProvider, isMockAIProvider } from "./factory"

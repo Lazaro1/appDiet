@@ -2,6 +2,8 @@
 
 import { cn } from "@/lib/utils"
 import { AppBadge } from "./app-badge"
+import { getMealStatusStyle, type MealStatus } from "@/lib/nutrition/meal-status"
+import { formatKcal } from "@/lib/nutrition/format"
 
 interface MealCardProps {
   /** Meal name (e.g. "Almoço") */
@@ -13,7 +15,7 @@ interface MealCardProps {
   /** Calories consumed (undefined if meal not yet eaten) */
   kcalConsumed?: number
   /** Current meal status */
-  status: "pending" | "eaten" | "skipped" | "out_of_window"
+  status: MealStatus
   /** Whether consumption is within ±10% of target (only meaningful when eaten) */
   conformant?: boolean
   /** Optional click handler */
@@ -31,43 +33,7 @@ export function MealCard({
 }: MealCardProps) {
   const isOverTarget = kcalConsumed !== undefined && kcalConsumed > kcalTarget
 
-  /* ---- determine card styling and badge ---- */
-  let cardClasses: string
-  let badgeVariant: "pending" | "eaten" | "skipped" | "warning" | "success" | "info"
-  let badgeLabel: string
-
-  switch (status) {
-    case "pending": {
-      cardClasses = "bg-canvas border-primary"
-      badgeVariant = "pending"
-      badgeLabel = "Pendente"
-      break
-    }
-    case "eaten": {
-      if (conformant) {
-        cardClasses = "bg-accent-green-soft border-success"
-        badgeVariant = "success"
-        badgeLabel = "Registrada"
-      } else {
-        cardClasses = "bg-warning-soft border-warning"
-        badgeVariant = "warning"
-        badgeLabel = isOverTarget ? "Acima da meta" : "Abaixo da meta"
-      }
-      break
-    }
-    case "skipped": {
-      cardClasses = "bg-surface border-border border-l-muted"
-      badgeVariant = "skipped"
-      badgeLabel = "Pulada"
-      break
-    }
-    case "out_of_window": {
-      cardClasses = "bg-warning-soft border-warning"
-      badgeVariant = "warning"
-      badgeLabel = "Fora da janela"
-      break
-    }
-  }
+  const { cardClasses, badgeVariant, badgeLabel } = getMealStatusStyle(status, { conformant, isOverTarget })
 
   const showKcalConsumed = kcalConsumed !== undefined
 
@@ -107,12 +73,12 @@ export function MealCard({
       <div className="mt-2">
         {showKcalConsumed ? (
           <p className="text-lg font-bold tracking-tight text-ink font-tabular-nums">
-            {kcalConsumed.toLocaleString("pt-BR")} de{" "}
-            {kcalTarget.toLocaleString("pt-BR")} kcal
+            {formatKcal(kcalConsumed)} de{" "}
+            {formatKcal(kcalTarget)} kcal
           </p>
         ) : (
           <p className="text-lg font-bold tracking-tight text-muted-foreground font-tabular-nums">
-            {kcalTarget.toLocaleString("pt-BR")} kcal meta
+            {formatKcal(kcalTarget)} kcal meta
           </p>
         )}
       </div>
