@@ -1,6 +1,7 @@
 import { requireApiUser, apiSuccess, apiError } from "@/lib/auth/require-api-user"
 import { DietPlanRepository } from "@/lib/db/repositories/diet-plan-repository"
 import { generateDietPlanForUser, importDietPlanForUser } from "@/lib/diet/create-plan"
+import { toUserFacingAiError } from "@/lib/ai/errors"
 
 export async function GET() {
   const { user, error } = await requireApiUser()
@@ -33,7 +34,9 @@ export async function POST(request: Request) {
 
     return apiError("Ação inválida. Use action: 'generate' ou 'import'")
   } catch (err) {
-    const message = err instanceof Error ? err.message : "Erro ao criar dieta"
-    return apiError(message, 500)
+    if (process.env.NODE_ENV === "development") {
+      console.error("[POST /api/diet]", err)
+    }
+    return apiError(toUserFacingAiError(err), 500)
   }
 }

@@ -5,6 +5,7 @@ import { DietPlanRepository } from "@/lib/db/repositories/diet-plan-repository"
 import { formatKcal } from "@/lib/nutrition/format"
 import { Button } from "@/components/ui/button"
 import { AppBadge } from "@/components/ui/app-badge"
+import { PageContainer, PageHeader } from "@/components/ui/page-container"
 import { Plus } from "lucide-react"
 
 export default async function DietPage() {
@@ -16,19 +17,19 @@ export default async function DietPage() {
   const plans = await repo.findAllByUserId(result.user.id)
 
   return (
-    <div className="mx-auto max-w-lg space-y-6 px-4 py-6">
-      <header className="flex items-center justify-between">
-        <div>
-          <h1 className="text-2xl font-bold tracking-tight text-ink">Minhas dietas</h1>
-          <p className="text-sm text-muted-foreground">{plans.length} plano(s)</p>
-        </div>
-        <Link href="/diet/new">
-          <Button size="sm">
-            <Plus />
-            Nova
-          </Button>
-        </Link>
-      </header>
+    <PageContainer>
+      <PageHeader
+        title="Minhas dietas"
+        subtitle={`${plans.length} plano(s)`}
+        action={
+          <Link href="/diet/new">
+            <Button size="sm">
+              <Plus />
+              Nova
+            </Button>
+          </Link>
+        }
+      />
 
       {plans.length === 0 ? (
         <div className="rounded-lg border border-dashed border-border p-8 text-center">
@@ -62,6 +63,6 @@ export default async function DietPage() {
           ))}
         </div>
       )}
-    </div>
+    </PageContainer>
   )
 }

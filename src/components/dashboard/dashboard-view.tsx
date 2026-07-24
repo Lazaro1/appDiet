@@ -5,36 +5,23 @@ import { Flame, CheckCircle2 } from "lucide-react"
 import { StatCard } from "@/components/ui/stat-card"
 import { CalorieBar } from "@/components/ui/calorie-bar"
 import { MealCard } from "@/components/ui/meal-card"
+import { PageContainer } from "@/components/ui/page-container"
+import { useDay } from "@/components/providers/day-provider"
 import { formatKcal } from "@/lib/nutrition/format"
-import type { MealStatus } from "@/lib/nutrition/meal-status"
-
-interface DashboardMeal {
-  id: string
-  name: string
-  timeWindow: string
-  kcalTarget: number
-  kcalConsumed?: number
-  status: MealStatus
-  conformant?: boolean
-}
 
 interface DashboardViewProps {
   userName: string
-  consumedToday: number
-  dailyTarget: number
   weekBalance: number
   adherenceScore: number
-  meals: DashboardMeal[]
 }
 
 export function DashboardView({
   userName,
-  consumedToday,
-  dailyTarget,
   weekBalance,
   adherenceScore,
-  meals,
 }: DashboardViewProps) {
+  const { meals, consumedToday, dailyTarget } = useDay()
+
   const weekLabel =
     weekBalance > 0
       ? "Sua semana está em déficit!"
@@ -43,7 +30,7 @@ export function DashboardView({
         : "Sua semana está equilibrada"
 
   return (
-    <div className="mx-auto max-w-lg space-y-6 px-4 py-6">
+    <PageContainer>
       <header>
         <h1 className="text-2xl font-bold tracking-tight text-ink">
           Olá, {userName}
@@ -113,6 +100,6 @@ export function DashboardView({
           </Link>
         ))}
       </div>
-    </div>
+    </PageContainer>
   )
 }

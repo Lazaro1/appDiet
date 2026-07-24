@@ -3,22 +3,34 @@ import { auth } from "@clerk/nextjs/server"
 import { getAuthenticatedUser } from "@/lib/auth/get-authenticated-user"
 import { DietPlanRepository } from "@/lib/db/repositories/diet-plan-repository"
 import { MealLogRepository } from "@/lib/db/repositories/meal-log-repository"
-import { AppShell } from "@/components/layout/app-shell"
+import { AppProviders } from "@/components/providers/app-providers"
+import { buildDaySnapshot, type DaySnapshot } from "@/lib/nutrition/day"
 
-async function getFabHref(userId: string): Promise<string | null> {
+async function getDaySnapshot(
+  userId: string,
+  dailyKcalTarget: number | null,
+): Promise<DaySnapshot> {
   const dietRepo = new DietPlanRepository()
   const mealLogRepo = new MealLogRepository()
   const activePlan = await dietRepo.findActiveByUserId(userId)
 
-  if (!activePlan) return "/diet/new"
+  if (!activePlan) {
+    return {
+      meals: [],
+      consumedToday: 0,
+      dailyTarget: dailyKcalTarget ?? 2000,
+      hasActivePlan: false,
+    }
+  }
 
   const todayLogs = await mealLogRepo.findByUserAndDate(userId, new Date())
-  const loggedMealIds = new Set(
-    todayLogs.filter((log) => log.mealId).map((log) => log.mealId!),
-  )
 
-  const pending = activePlan.meals.find((meal) => !loggedMealIds.has(meal.id))
-  return pending ? `/meals/${pending.id}` : null
+  return buildDaySnapshot({
+    meals: activePlan.meals,
+    logs: todayLogs,
+    dailyTarget: dailyKcalTarget ?? activePlan.totalKcal,
+    hasActivePlan: true,
+  })
 }
 
 export default async function AppLayout({
@@ -33,13 +45,10 @@ export default async function AppLayout({
   if (!result) redirect("/sign-in")
   if (result.redirectTo) redirect(result.redirectTo)
 
-  const fabHref = await getFabHref(result.user.id)
-
-  return (
-    <AppShell fabHref={fabHref}>
-      <div className="flex min-h-screen flex-col">
-        <main className="flex-1 pb-20 md:pb-0 md:pl-64">{children}</main>
-      </div>
-    </AppShell>
+  const daySnapshot = await getDaySnapshot(
+    result.user.id,
+    result.user.dailyKcalTarget,
   )
+
+  return <AppProviders daySnapshot={daySnapshot}>{children}</AppProviders>
 }

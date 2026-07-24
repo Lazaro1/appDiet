@@ -39,7 +39,7 @@ export function Step2Measurements({ data, onChange, errors }: Step2Props) {
           </span>
         </div>
         {errors.weight && (
-          <p className="text-sm text-danger">{errors.weight}</p>
+          <p className="text-sm text-destructive">{errors.weight}</p>
         )}
       </div>
 
@@ -65,7 +65,7 @@ export function Step2Measurements({ data, onChange, errors }: Step2Props) {
           </span>
         </div>
         {errors.height && (
-          <p className="text-sm text-danger">{errors.height}</p>
+          <p className="text-sm text-destructive">{errors.height}</p>
         )}
       </div>
     </div>

@@ -40,7 +40,7 @@ export function Step5Routine({ data, onChange, errors }: Step5Props) {
           ))}
         </RadioGroup>
         {errors.mealsPerDay && (
-          <p className="text-sm text-danger">{errors.mealsPerDay}</p>
+          <p className="text-sm text-destructive">{errors.mealsPerDay}</p>
         )}
       </div>
 

@@ -28,7 +28,7 @@ export function Step1BasicInfo({ data, onChange, errors }: Step1Props) {
           className="h-12 rounded-xl px-4 text-base"
         />
         {errors.name && (
-          <p className="text-sm text-danger">{errors.name}</p>
+          <p className="text-sm text-destructive">{errors.name}</p>
         )}
       </div>
 
@@ -45,7 +45,7 @@ export function Step1BasicInfo({ data, onChange, errors }: Step1Props) {
           max={new Date().toISOString().split("T")[0]}
         />
         {errors.birthDate && (
-          <p className="text-sm text-danger">{errors.birthDate}</p>
+          <p className="text-sm text-destructive">{errors.birthDate}</p>
         )}
       </div>
 
@@ -68,7 +68,7 @@ export function Step1BasicInfo({ data, onChange, errors }: Step1Props) {
           ))}
         </RadioGroup>
         {errors.sex && (
-          <p className="text-sm text-danger">{errors.sex}</p>
+          <p className="text-sm text-destructive">{errors.sex}</p>
         )}
       </div>
     </div>

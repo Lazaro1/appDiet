@@ -3,6 +3,8 @@
 import { useState } from "react"
 import { Button } from "@/components/ui/button"
 import { Sheet } from "@/components/ui/sheet"
+import { Textarea } from "@/components/ui/textarea"
+import { useAsyncAction } from "@/hooks/use-async-action"
 import { RefreshCw, Loader2 } from "lucide-react"
 import { formatKcal } from "@/lib/nutrition/format"
 
@@ -30,39 +32,28 @@ export function SwapSheetTrigger({
 }: SwapSheetTriggerProps) {
   const [open, setOpen] = useState(false)
   const [availableFoods, setAvailableFoods] = useState("")
-  const [loading, setLoading] = useState(false)
   const [suggestions, setSuggestions] = useState<SwapSuggestion[]>([])
-  const [error, setError] = useState<string | null>(null)
 
-  async function handleSuggest() {
+  const { run: handleSuggest, loading, error } = useAsyncAction(async () => {
     if (!availableFoods.trim()) {
-      setError("Informe o que você tem disponível")
-      return
+      throw new Error("Informe o que você tem disponível")
     }
-    setLoading(true)
-    setError(null)
 
-    try {
-      const res = await fetch(`/api/diet/${planId}/swap`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          itemName,
-          itemKcal,
-          itemProtein,
-          availableFoods,
-          mealKcalTarget,
-        }),
-      })
-      const json = await res.json()
-      if (!res.ok) throw new Error(json.error ?? "Erro ao sugerir trocas")
-      setSuggestions(json.data.suggestions)
-    } catch (err) {
-      setError(err instanceof Error ? err.message : "Erro ao sugerir trocas")
-    } finally {
-      setLoading(false)
-    }
-  }
+    const res = await fetch(`/api/diet/${planId}/swap`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        itemName,
+        itemKcal,
+        itemProtein,
+        availableFoods,
+        mealKcalTarget,
+      }),
+    })
+    const json = await res.json()
+    if (!res.ok) throw new Error(json.error ?? "Erro ao sugerir trocas")
+    setSuggestions(json.data.suggestions)
+  })
 
   return (
     <>
@@ -80,14 +71,15 @@ export function SwapSheetTrigger({
         <p className="mb-4 text-sm text-muted-foreground">
           Original: {formatKcal(itemKcal)} kcal · {itemProtein}g proteína
         </p>
-        <textarea
+        <Textarea
           value={availableFoods}
           onChange={(e) => setAvailableFoods(e.target.value)}
           placeholder="O que você tem disponível? Ex: ovo, queijo, atum"
-          className="mb-4 min-h-[80px] w-full rounded-lg border border-border bg-background p-3 text-sm"
+          className="mb-4 min-h-[80px]"
+          aria-invalid={Boolean(error)}
         />
         {error && <p className="mb-2 text-sm text-destructive">{error}</p>}
-        <Button onClick={handleSuggest} disabled={loading} className="mb-4 w-full">
+        <Button onClick={() => handleSuggest()} disabled={loading} className="mb-4 w-full">
           {loading ? <Loader2 className="animate-spin" /> : "Sugerir alternativas"}
         </Button>
         {suggestions.length > 0 && (

@@ -4,49 +4,44 @@ import { useState } from "react"
 import { useRouter } from "next/navigation"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
-import { Label } from "@/components/ui/label"
+import { Field } from "@/components/ui/field"
+import { useAsyncAction } from "@/hooks/use-async-action"
+import { useToast } from "@/components/providers/toast-provider"
 import { Loader2 } from "lucide-react"
 
 export function WeightForm() {
   const router = useRouter()
+  const toast = useToast()
   const [weight, setWeight] = useState("")
-  const [loading, setLoading] = useState(false)
-  const [error, setError] = useState<string | null>(null)
-  const [success, setSuccess] = useState(false)
 
-  async function handleSubmit(e: React.FormEvent) {
-    e.preventDefault()
+  const { run, loading, error } = useAsyncAction(async () => {
     const value = parseFloat(weight.replace(",", "."))
     if (isNaN(value) || value < 30 || value > 300) {
-      setError("Informe um peso entre 30 e 300 kg")
-      return
+      throw new Error("Informe um peso entre 30 e 300 kg")
     }
 
-    setLoading(true)
-    setError(null)
+    const res = await fetch("/api/weight", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ weight: value }),
+    })
+    const json = await res.json()
+    if (!res.ok) throw new Error(json.error ?? "Erro ao registrar")
 
-    try {
-      const res = await fetch("/api/weight", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ weight: value }),
-      })
-      const json = await res.json()
-      if (!res.ok) throw new Error(json.error ?? "Erro ao registrar")
-      setSuccess(true)
-      setWeight("")
-      router.refresh()
-    } catch (err) {
-      setError(err instanceof Error ? err.message : "Erro ao registrar")
-    } finally {
-      setLoading(false)
-    }
-  }
+    setWeight("")
+    toast.success("Peso registrado!")
+    router.refresh()
+  })
 
   return (
-    <form onSubmit={handleSubmit} className="space-y-4">
-      <div>
-        <Label htmlFor="weight">Peso (kg)</Label>
+    <form
+      onSubmit={(e) => {
+        e.preventDefault()
+        run()
+      }}
+      className="space-y-4"
+    >
+      <Field label="Peso (kg)" htmlFor="weight" error={error ?? undefined}>
         <Input
           id="weight"
           type="text"
@@ -54,10 +49,9 @@ export function WeightForm() {
           placeholder="Ex: 78.5"
           value={weight}
           onChange={(e) => setWeight(e.target.value)}
+          aria-invalid={Boolean(error)}
         />
-      </div>
-      {error && <p className="text-sm text-destructive">{error}</p>}
-      {success && <p className="text-sm text-success">Peso registrado!</p>}
+      </Field>
       <Button type="submit" disabled={loading} className="w-full">
         {loading ? <Loader2 className="animate-spin" /> : "Registrar peso"}
       </Button>

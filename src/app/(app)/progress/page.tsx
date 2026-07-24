@@ -7,6 +7,7 @@ import { buildWeeklySummary, getWeekStart } from "@/lib/nutrition/weekly-summary
 import { ProgressRing } from "@/components/ui/progress-ring"
 import { WeeklyCalorieChart } from "@/components/progress/weekly-calorie-chart"
 import { WeightChart } from "@/components/progress/weight-chart"
+import { PageContainer, PageHeader } from "@/components/ui/page-container"
 import { formatKcal } from "@/lib/nutrition/format"
 
 export default async function ProgressPage() {
@@ -47,11 +48,8 @@ export default async function ProgressPage() {
         : "Semana equilibrada"
 
   return (
-    <div className="mx-auto max-w-lg space-y-6 px-4 py-6">
-      <header>
-        <h1 className="text-2xl font-bold tracking-tight text-ink">Progresso</h1>
-        <p className="text-sm text-muted-foreground">Últimos 7 dias</p>
-      </header>
+    <PageContainer>
+      <PageHeader title="Progresso" subtitle="Últimos 7 dias" />
 
       <div className="rounded-lg bg-signature-teal p-6 text-on-primary">
         <p className="text-lg font-semibold">{weekLabel}</p>
@@ -69,24 +67,26 @@ export default async function ProgressPage() {
         />
       </div>
 
-      <div className="rounded-lg border border-border bg-card p-4 shadow-sm">
-        <h2 className="mb-4 text-xs font-semibold uppercase tracking-wider text-muted-foreground">
-          Calorias por dia
-        </h2>
-        <WeeklyCalorieChart days={summary.days} />
-      </div>
+      <div className="grid gap-4 lg:grid-cols-2">
+        <div className="rounded-lg border border-border bg-card p-4 shadow-sm">
+          <h2 className="mb-4 text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+            Calorias por dia
+          </h2>
+          <WeeklyCalorieChart days={summary.days} />
+        </div>
 
-      <div className="rounded-lg border border-border bg-card p-4 shadow-sm">
-        <h2 className="mb-4 text-xs font-semibold uppercase tracking-wider text-muted-foreground">
-          Peso
-        </h2>
-        <WeightChart
-          logs={weightLogs.reverse().map((l) => ({
-            date: l.date.toISOString(),
-            weight: l.weight,
-          }))}
-        />
+        <div className="rounded-lg border border-border bg-card p-4 shadow-sm">
+          <h2 className="mb-4 text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+            Peso
+          </h2>
+          <WeightChart
+            logs={weightLogs.reverse().map((l) => ({
+              date: l.date.toISOString(),
+              weight: l.weight,
+            }))}
+          />
+        </div>
       </div>
-    </div>
+    </PageContainer>
   )
 }

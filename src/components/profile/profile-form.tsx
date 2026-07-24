@@ -4,7 +4,16 @@ import { useState, useTransition } from "react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
+import { Field } from "@/components/ui/field"
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group"
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select"
+import { useToast } from "@/components/providers/toast-provider"
 import { updateProfile } from "@/app/(app)/profile/actions"
 import {
   SEX_LABELS,
@@ -37,8 +46,7 @@ interface ProfileFormProps {
 
 export function ProfileForm({ initial }: ProfileFormProps) {
   const [pending, startTransition] = useTransition()
-  const [error, setError] = useState<string | null>(null)
-  const [success, setSuccess] = useState(false)
+  const toast = useToast()
   const [form, setForm] = useState(initial)
 
   function updateField<K extends keyof typeof form>(key: K, value: (typeof form)[K]) {
@@ -47,8 +55,6 @@ export function ProfileForm({ initial }: ProfileFormProps) {
 
   function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
-    setError(null)
-    setSuccess(false)
 
     startTransition(async () => {
       try {
@@ -65,9 +71,9 @@ export function ProfileForm({ initial }: ProfileFormProps) {
           foodPreferences: form.foodPreferences,
           mealsPerDay: form.mealsPerDay,
         })
-        setSuccess(true)
+        toast.success("Perfil atualizado!")
       } catch (err) {
-        setError(err instanceof Error ? err.message : "Erro ao salvar")
+        toast.error(err instanceof Error ? err.message : "Erro ao salvar")
       }
     })
   }
@@ -78,14 +84,12 @@ export function ProfileForm({ initial }: ProfileFormProps) {
         <h2 className="text-sm font-semibold uppercase tracking-wider text-muted-foreground">
           Dados básicos
         </h2>
-        <div>
-          <Label htmlFor="name">Nome</Label>
+        <Field label="Nome" htmlFor="name">
           <Input id="name" value={form.name} onChange={(e) => updateField("name", e.target.value)} />
-        </div>
-        <div>
-          <Label htmlFor="birthDate">Data de nascimento</Label>
+        </Field>
+        <Field label="Data de nascimento" htmlFor="birthDate">
           <Input id="birthDate" type="date" value={form.birthDate} onChange={(e) => updateField("birthDate", e.target.value)} />
-        </div>
+        </Field>
         <div>
           <Label>Sexo</Label>
           <RadioGroup
@@ -108,14 +112,12 @@ export function ProfileForm({ initial }: ProfileFormProps) {
           Medidas
         </h2>
         <div className="grid grid-cols-2 gap-3">
-          <div>
-            <Label htmlFor="weight">Peso (kg)</Label>
+          <Field label="Peso (kg)" htmlFor="weight">
             <Input id="weight" type="number" step="0.1" value={form.weight} onChange={(e) => updateField("weight", parseFloat(e.target.value))} />
-          </div>
-          <div>
-            <Label htmlFor="height">Altura (cm)</Label>
+          </Field>
+          <Field label="Altura (cm)" htmlFor="height">
             <Input id="height" type="number" value={form.height} onChange={(e) => updateField("height", parseFloat(e.target.value))} />
-          </div>
+          </Field>
         </div>
         <Link href="/weight" className="text-sm text-primary hover:underline">
           Registrar peso de hoje →
@@ -164,37 +166,38 @@ export function ProfileForm({ initial }: ProfileFormProps) {
         <h2 className="text-sm font-semibold uppercase tracking-wider text-muted-foreground">
           Restrições
         </h2>
-        <div>
-          <Label htmlFor="restrictions">Alergias e intolerâncias</Label>
+        <Field label="Alergias e intolerâncias" htmlFor="restrictions">
           <Input id="restrictions" value={form.restrictions} onChange={(e) => updateField("restrictions", e.target.value)} />
-        </div>
-        <div>
-          <Label htmlFor="conditions">Condições de saúde</Label>
+        </Field>
+        <Field label="Condições de saúde" htmlFor="conditions">
           <Input id="conditions" value={form.conditions} onChange={(e) => updateField("conditions", e.target.value)} />
-        </div>
-        <div>
-          <Label htmlFor="foodPreferences">Preferências alimentares</Label>
+        </Field>
+        <Field label="Preferências alimentares" htmlFor="foodPreferences">
           <Input id="foodPreferences" value={form.foodPreferences} onChange={(e) => updateField("foodPreferences", e.target.value)} />
-        </div>
+        </Field>
       </section>
 
       <section className="space-y-4">
         <h2 className="text-sm font-semibold uppercase tracking-wider text-muted-foreground">
           Rotina
         </h2>
-        <div>
-          <Label htmlFor="mealsPerDay">Refeições por dia</Label>
-          <select
-            id="mealsPerDay"
-            value={form.mealsPerDay}
-            onChange={(e) => updateField("mealsPerDay", parseInt(e.target.value))}
-            className="mt-1 w-full rounded-lg border border-border bg-background px-3 py-2 text-sm"
+        <Field label="Refeições por dia" htmlFor="mealsPerDay">
+          <Select
+            value={String(form.mealsPerDay)}
+            onValueChange={(v) => updateField("mealsPerDay", parseInt(v as string))}
           >
-            {[3, 4, 5, 6].map((n) => (
-              <option key={n} value={n}>{n} refeições</option>
-            ))}
-          </select>
-        </div>
+            <SelectTrigger id="mealsPerDay" className="w-full">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              {[3, 4, 5, 6].map((n) => (
+                <SelectItem key={n} value={String(n)}>
+                  {n} refeições
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </Field>
       </section>
 
       {(form.bmr || form.tdee || form.dailyKcalTarget) && (
@@ -205,9 +208,6 @@ export function ProfileForm({ initial }: ProfileFormProps) {
           {form.dailyKcalTarget && <p className="font-tabular-nums">Meta diária: {formatKcal(form.dailyKcalTarget)} kcal</p>}
         </div>
       )}
-
-      {error && <p className="text-sm text-destructive">{error}</p>}
-      {success && <p className="text-sm text-success">Perfil atualizado!</p>}
 
       <Button type="submit" disabled={pending} className="w-full" size="lg">
         {pending ? <Loader2 className="animate-spin" /> : "Salvar alterações"}

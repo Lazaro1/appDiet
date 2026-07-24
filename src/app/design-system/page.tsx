@@ -8,7 +8,16 @@ import { ChatBubble } from "@/components/ui/chat-bubble"
 import { OnboardingStepper } from "@/components/ui/onboarding-stepper"
 import { AppBadge } from "@/components/ui/app-badge"
 import { BottomNav } from "@/components/layout/bottom-nav"
-import { Fab } from "@/components/layout/fab"
+import { Input } from "@/components/ui/input"
+import { Textarea } from "@/components/ui/textarea"
+import { Field } from "@/components/ui/field"
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select"
 import {
   Home,
   Utensils,
@@ -19,6 +28,7 @@ import {
   TrendingDown,
   AlertTriangle,
   CheckCircle2,
+  Plus,
 } from "lucide-react"
 
 /**
@@ -784,6 +794,58 @@ export default function DesignSystemPage() {
         </Section>
 
         {/* ═══════════════════════════════════════════════════
+            15b. FORM PRIMITIVES (reusable: Field + Input/Textarea/Select)
+            ═══════════════════════════════════════════════════ */}
+        <Section title="Form primitives" token="components.form">
+          <p className="text-sm text-muted-foreground">
+            Blocos reutilizados em todos os formulários: <code>Field</code>{" "}
+            (label + controle + erro/hint), <code>Input</code>,{" "}
+            <code>Textarea</code> e <code>Select</code>.
+          </p>
+          <div className="grid gap-4 sm:grid-cols-2">
+            <Field label="Nome" htmlFor="ds-name" hint="Como devemos te chamar">
+              <Input id="ds-name" placeholder="Ex: Maria" />
+            </Field>
+            <Field
+              label="Peso (kg)"
+              htmlFor="ds-weight"
+              error="Informe um peso entre 30 e 300 kg"
+            >
+              <Input id="ds-weight" defaultValue="12" aria-invalid />
+            </Field>
+            <Field
+              label="Preferências"
+              htmlFor="ds-prefs"
+              className="sm:col-span-2"
+            >
+              <Textarea
+                id="ds-prefs"
+                placeholder="Ex: vegetariano, sem peixe..."
+                className="min-h-[100px]"
+              />
+            </Field>
+            <Field
+              label="Refeições por dia"
+              htmlFor="ds-meals"
+              className="sm:col-span-2"
+            >
+              <Select defaultValue="4">
+                <SelectTrigger id="ds-meals" className="w-full">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  {[3, 4, 5, 6].map((n) => (
+                    <SelectItem key={n} value={String(n)}>
+                      {n} refeições
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </Field>
+          </div>
+        </Section>
+
+        {/* ═══════════════════════════════════════════════════
             16. BOTTOM NAV (preview only — not fixed)
             ═══════════════════════════════════════════════════ */}
         <Section title="Bottom Nav" token="components.bottom-nav">
@@ -917,8 +979,14 @@ export default function DesignSystemPage() {
       {/* Bottom Nav (fixed) */}
       <BottomNav items={navItems} />
 
-      {/* FAB */}
-      <Fab onClick={() => {}} label="Registrar refeição" />
+      {/* FAB (static preview — the real Fab derives its target from DayProvider) */}
+      <button
+        type="button"
+        aria-label="Registrar refeição"
+        className="fixed bottom-20 right-4 z-50 flex h-14 w-14 items-center justify-center rounded-full bg-primary text-on-primary shadow-lg transition-colors hover:bg-primary-hover active:bg-primary-active lg:bottom-8 lg:right-8"
+      >
+        <Plus size={24} />
+      </button>
     </div>
   )
 }

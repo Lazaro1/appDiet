@@ -3,6 +3,8 @@
 import { useState } from "react"
 import { useRouter } from "next/navigation"
 import { Button } from "@/components/ui/button"
+import { PageContainer, PageHeader } from "@/components/ui/page-container"
+import { useToast } from "@/components/providers/toast-provider"
 import { DietReviewCard } from "./diet-review-card"
 import { formatKcal } from "@/lib/nutrition/format"
 import { Loader2, CheckCircle2, XCircle } from "lucide-react"
@@ -43,28 +45,26 @@ export function DietReviewActions({
   isActive,
 }: DietReviewActionsProps) {
   const router = useRouter()
+  const toast = useToast()
   const [loading, setLoading] = useState<"approve" | "reject" | null>(null)
-  const [error, setError] = useState<string | null>(null)
 
   async function handleApprove() {
     setLoading("approve")
-    setError(null)
     try {
       const res = await fetch(`/api/diet/${planId}/activate`, { method: "POST" })
       const json = await res.json()
       if (!res.ok) throw new Error(json.error ?? "Erro ao ativar")
+      toast.success("Dieta ativada!")
       router.push("/")
       router.refresh()
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Erro ao ativar")
-    } finally {
+      toast.error(err instanceof Error ? err.message : "Erro ao ativar")
       setLoading(null)
     }
   }
 
   async function handleReject() {
     setLoading("reject")
-    setError(null)
     try {
       const res = await fetch(`/api/diet/${planId}`, {
         method: "PATCH",
@@ -75,30 +75,25 @@ export function DietReviewActions({
       if (!res.ok) throw new Error(json.error ?? "Erro ao rejeitar")
       router.push("/diet/new")
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Erro ao rejeitar")
-    } finally {
+      toast.error(err instanceof Error ? err.message : "Erro ao rejeitar")
       setLoading(null)
     }
   }
 
   return (
-    <div className="mx-auto max-w-lg space-y-6 px-4 py-6">
-      <header>
-        <h1 className="text-2xl font-bold tracking-tight text-ink">{planName}</h1>
-        <p className="text-sm text-muted-foreground">
-          {formatKcal(totalKcal)} kcal/dia · {meals.length} refeições
-          {isActive && " · Ativo"}
-          {reviewStatus === "pending" && " · Aguardando revisão"}
-        </p>
-      </header>
+    <PageContainer>
+      <PageHeader
+        title={planName}
+        subtitle={`${formatKcal(totalKcal)} kcal/dia · ${meals.length} refeições${
+          isActive ? " · Ativo" : ""
+        }${reviewStatus === "pending" ? " · Aguardando revisão" : ""}`}
+      />
 
       <div className="space-y-3">
         {meals.map((meal) => (
           <DietReviewCard key={meal.id} meal={meal} />
         ))}
       </div>
-
-      {error && <p className="text-sm text-destructive">{error}</p>}
 
       {reviewStatus === "pending" && !isActive && (
         <div className="flex gap-3">
@@ -127,6 +122,6 @@ export function DietReviewActions({
           Ir para o dashboard
         </Button>
       )}
-    </div>
+    </PageContainer>
   )
 }

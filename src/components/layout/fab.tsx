@@ -1,31 +1,33 @@
 "use client"
 
 import { Plus } from "lucide-react"
+import { useRouter } from "next/navigation"
+import { useDay } from "@/components/providers/day-provider"
 import { cn } from "@/lib/utils"
 
-interface FabProps {
-  /** Click handler */
-  onClick: () => void
-  /** Custom icon (defaults to Plus) */
-  icon?: React.ReactNode
-  /** Accessible label */
-  label?: string
-}
+/**
+ * Floating action button that jumps to the next meal to register. Derives its
+ * target from the shared DayProvider, so logging a meal updates it instantly.
+ * Renders nothing when the day is complete.
+ */
+export function Fab() {
+  const router = useRouter()
+  const { nextPendingHref, hasActivePlan } = useDay()
 
-export function Fab({ onClick, icon, label }: FabProps) {
+  if (!nextPendingHref) return null
+
   return (
     <button
-      onClick={onClick}
-      aria-label={label ?? "Adicionar"}
+      onClick={() => router.push(nextPendingHref)}
+      aria-label={hasActivePlan ? "Registrar refeição" : "Criar dieta"}
       className={cn(
-        "fixed bottom-20 right-4 z-50",
-        "md:right-auto md:left-[calc(50%+120px)]",
+        "fixed bottom-20 right-4 z-50 lg:bottom-8 lg:right-8",
         "flex h-14 w-14 items-center justify-center",
         "rounded-full bg-primary text-on-primary shadow-lg",
         "transition-colors hover:bg-primary-hover active:bg-primary-active",
       )}
     >
-      {icon ?? <Plus size={24} />}
+      <Plus size={24} />
     </button>
   )
 }

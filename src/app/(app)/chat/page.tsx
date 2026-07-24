@@ -19,7 +19,7 @@ function ChatPageContent() {
   const { messages, loading, streaming, sendMessage } = useChat()
 
   return (
-    <div className="mx-auto flex h-[calc(100vh-5rem)] max-w-lg flex-col">
+    <div className="mx-auto flex h-[calc(100dvh-5rem)] max-w-lg flex-col lg:h-dvh">
       <header className="border-b border-border px-4 py-4">
         <h1 className="text-xl font-bold tracking-tight text-ink">Chat com IA</h1>
         <p className="text-xs text-muted-foreground">Assistente de nutrição</p>

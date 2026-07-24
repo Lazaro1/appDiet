@@ -1,6 +1,7 @@
 import { redirect } from "next/navigation"
 import { getAuthenticatedUser } from "@/lib/auth/get-authenticated-user"
 import { ProfileForm } from "@/components/profile/profile-form"
+import { PageContainer, PageHeader } from "@/components/ui/page-container"
 import { parseUserPreferences } from "@/lib/diet/map-ai-plan"
 
 export default async function ProfilePage() {
@@ -12,11 +13,8 @@ export default async function ProfilePage() {
   const prefs = parseUserPreferences(user.preferences)
 
   return (
-    <div className="mx-auto max-w-lg space-y-6 px-4 py-6">
-      <header>
-        <h1 className="text-2xl font-bold tracking-tight text-ink">Perfil</h1>
-        <p className="text-sm text-muted-foreground">Edite seus dados e preferências</p>
-      </header>
+    <PageContainer>
+      <PageHeader title="Perfil" subtitle="Edite seus dados e preferências" />
 
       <ProfileForm
         initial={{
@@ -38,6 +36,6 @@ export default async function ProfilePage() {
           dailyKcalTarget: user.dailyKcalTarget,
         }}
       />
-    </div>
+    </PageContainer>
   )
 }

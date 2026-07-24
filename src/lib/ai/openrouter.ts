@@ -1,4 +1,8 @@
+import { aiSchemas, requestStructuredJson } from "./json-response"
 import type { AIProvider, ChatMessageInput, ChatResponse, ParsedFoodItem } from "./types"
+
+const JSON_RETRY_HINT =
+  "Responda APENAS com JSON válido, sem markdown, comentários ou texto fora do JSON."
 
 interface OpenRouterConfig {
   apiKey: string
@@ -76,21 +80,28 @@ export class OpenRouterProvider implements AIProvider {
   async parseMeal(text: string, context?: { mealName?: string; kcalTarget?: number }): Promise<ParsedFoodItem[]> {
     const contextStr = context ? `\nContexto: refeição "${context.mealName}", meta de ${context.kcalTarget} kcal` : ""
 
-    const response = await this.chat({
-      systemPrompt: `Você é um parser de refeições. Parseie a descrição da refeição em alimentos estruturados.
+    return requestStructuredJson({
+      label: "meal parse",
+      schema: aiSchemas.parsedFoodItems,
+      request: (attempt) =>
+        this.chat({
+          systemPrompt: `Você é um parser de refeições. Parseie a descrição da refeição em alimentos estruturados.
 Para cada alimento, estime a porção em gramas com base no contexto brasileiro.
-Responda APENAS com JSON válido, sem markdown:
+${JSON_RETRY_HINT}
 [{"foodName":"nome","estimatedGrams":0,"estimatedKcal":0,"estimatedProtein":0,"estimatedCarbs":0,"estimatedFat":0}]${contextStr}`,
-      messages: [{ role: "user", content: text }],
-      temperature: 0.3,
+          messages: [
+            {
+              role: "user",
+              content:
+                attempt > 1
+                  ? `${text}\n\nA resposta anterior não era JSON válido. ${JSON_RETRY_HINT}`
+                  : text,
+            },
+          ],
+          temperature: 0.2,
+          maxTokens: 1024,
+        }),
     })
-
-    try {
-      const cleaned = response.content.replace(/```json\n?/g, "").replace(/```\n?/g, "").trim()
-      return JSON.parse(cleaned) as ParsedFoodItem[]
-    } catch {
-      throw new Error("Failed to parse AI meal response as JSON")
-    }
   }
 
   async importDietPlan(
@@ -101,21 +112,28 @@ Responda APENAS com JSON válido, sem markdown:
   }> {
     const windowsStr = mealWindows.map((w) => `${w.name} (${w.startHour}h-${w.endHour}h)`).join(", ")
 
-    const response = await this.chat({
-      systemPrompt: `Você é um parser de dietas. Converta o texto da dieta em um plano estruturado.
+    return requestStructuredJson({
+      label: "diet import",
+      schema: aiSchemas.dietPlan,
+      request: (attempt) =>
+        this.chat({
+          systemPrompt: `Você é um parser de dietas. Converta o texto da dieta em um plano estruturado.
 Use as janelas de refeição: ${windowsStr}
-Responda APENAS com JSON válido, sem markdown:
+${JSON_RETRY_HINT}
 {"meals":[{"name":"nome","kcalTarget":0,"items":[{"foodName":"nome","estimatedGrams":0,"estimatedKcal":0,"estimatedProtein":0,"estimatedCarbs":0,"estimatedFat":0}]}]}`,
-      messages: [{ role: "user", content: text }],
-      temperature: 0.3,
+          messages: [
+            {
+              role: "user",
+              content:
+                attempt > 1
+                  ? `${text}\n\nA resposta anterior não era JSON válido. ${JSON_RETRY_HINT}`
+                  : text,
+            },
+          ],
+          temperature: 0.2,
+          maxTokens: 4096,
+        }),
     })
-
-    try {
-      const cleaned = response.content.replace(/```json\n?/g, "").replace(/```\n?/g, "").trim()
-      return JSON.parse(cleaned) as { meals: Array<{ name: string; kcalTarget: number; items: ParsedFoodItem[] }> }
-    } catch {
-      throw new Error("Failed to parse imported diet as JSON")
-    }
   }
 
   async suggestSwap(params: {
@@ -125,25 +143,31 @@ Responda APENAS com JSON válido, sem markdown:
     availableFoods: string
     mealKcalTarget: number
   }): Promise<Array<{ name: string; kcal: number; protein: number; description: string }>> {
-    const response = await this.chat({
-      systemPrompt: `Você sugere trocas alimentares equivalentes em calorias e macros.
-Responda APENAS com JSON válido, sem markdown:
-[{"name":"alimento","kcal":0,"protein":0,"description":"breve explicação"}]`,
-      messages: [{
-        role: "user",
-        content: `Trocar "${params.itemName}" (${params.itemKcal} kcal, ${params.itemProtein}g proteína).
+    const userPrompt = `Trocar "${params.itemName}" (${params.itemKcal} kcal, ${params.itemProtein}g proteína).
 Alimentos disponíveis: ${params.availableFoods}
-Meta da refeição: ${params.mealKcalTarget} kcal. Sugira 3 alternativas.`,
-      }],
-      temperature: 0.5,
-    })
+Meta da refeição: ${params.mealKcalTarget} kcal. Sugira 3 alternativas.`
 
-    try {
-      const cleaned = response.content.replace(/```json\n?/g, "").replace(/```\n?/g, "").trim()
-      return JSON.parse(cleaned) as Array<{ name: string; kcal: number; protein: number; description: string }>
-    } catch {
-      throw new Error("Failed to parse swap suggestions as JSON")
-    }
+    return requestStructuredJson({
+      label: "swap suggestions",
+      schema: aiSchemas.swapSuggestions,
+      request: (attempt) =>
+        this.chat({
+          systemPrompt: `Você sugere trocas alimentares equivalentes em calorias e macros.
+${JSON_RETRY_HINT}
+[{"name":"alimento","kcal":0,"protein":0,"description":"breve explicação"}]`,
+          messages: [
+            {
+              role: "user",
+              content:
+                attempt > 1
+                  ? `${userPrompt}\n\nA resposta anterior não era JSON válido. ${JSON_RETRY_HINT}`
+                  : userPrompt,
+            },
+          ],
+          temperature: 0.4,
+          maxTokens: 1024,
+        }),
+    })
   }
 
   async generateDietPlan(params: {
@@ -159,27 +183,34 @@ Meta da refeição: ${params.mealKcalTarget} kcal. Sugira 3 alternativas.`,
       items: ParsedFoodItem[]
     }>
   }> {
-    const response = await this.chat({
-      systemPrompt: `Você é um nutricionista. Crie um plano alimentar diário com base no perfil do paciente.
-Responda APENAS com JSON válido, sem markdown:
-{"meals":[{"name":"nome","kcalTarget":0,"items":[{"foodName":"nome","estimatedGrams":0,"estimatedKcal":0,"estimatedProtein":0,"estimatedCarbs":0,"estimatedFat":0}]}]}`,
-      messages: [{
-        role: "user",
-        content: `Meta calórica diária: ${params.dailyKcalTarget} kcal
+    const userPrompt = `Meta calórica diária: ${params.dailyKcalTarget} kcal
 Refeições por dia: ${params.mealsPerDay}
-Janelas: ${params.mealWindows.map(w => `${w.name} (${w.startHour}h-${w.endHour}h)`).join(", ")}
+Janelas: ${params.mealWindows.map((w) => `${w.name} (${w.startHour}h-${w.endHour}h)`).join(", ")}
 Restrições: ${params.restrictions?.join(", ") || "nenhuma"}
-Preferências: ${params.preferences?.join(", ") || "nenhuma"}`,
-      }],
-      temperature: 0.5,
-    })
+Preferências: ${params.preferences?.join(", ") || "nenhuma"}
+Crie exatamente ${params.mealsPerDay} refeições, com 2 a 4 alimentos por refeição.`
 
-    try {
-      const cleaned = response.content.replace(/```json\n?/g, "").replace(/```\n?/g, "").trim()
-      return JSON.parse(cleaned) as { meals: Array<{ name: string; kcalTarget: number; items: ParsedFoodItem[] }> }
-    } catch {
-      throw new Error("Failed to parse AI diet plan response as JSON")
-    }
+    return requestStructuredJson({
+      label: "diet plan",
+      schema: aiSchemas.dietPlan,
+      request: (attempt) =>
+        this.chat({
+          systemPrompt: `Você é um nutricionista. Crie um plano alimentar diário com base no perfil do paciente.
+${JSON_RETRY_HINT}
+{"meals":[{"name":"nome","kcalTarget":0,"items":[{"foodName":"nome","estimatedGrams":0,"estimatedKcal":0,"estimatedProtein":0,"estimatedCarbs":0,"estimatedFat":0}]}]}`,
+          messages: [
+            {
+              role: "user",
+              content:
+                attempt > 1
+                  ? `${userPrompt}\n\nA resposta anterior não era JSON válido ou veio incompleta. ${JSON_RETRY_HINT}`
+                  : userPrompt,
+            },
+          ],
+          temperature: 0.3,
+          maxTokens: 4096,
+        }),
+    })
   }
 
   private async *streamRequest(model: string, body: object): AsyncGenerator<string, void, unknown> {

@@ -3,19 +3,18 @@
 import { useState } from "react"
 import { DietGenerateForm } from "@/components/diet/diet-generate-form"
 import { DietImportForm } from "@/components/diet/diet-import-form"
+import { PageContainer, PageHeader } from "@/components/ui/page-container"
 import { cn } from "@/lib/utils"
 
 export function NewDietTabs() {
   const [tab, setTab] = useState<"generate" | "import">("generate")
 
   return (
-    <div className="mx-auto max-w-lg space-y-6 px-4 py-6">
-      <header>
-        <h1 className="text-2xl font-bold tracking-tight text-ink">Criar dieta</h1>
-        <p className="text-sm text-muted-foreground">
-          Gere um plano com IA ou importe a dieta do seu nutricionista
-        </p>
-      </header>
+    <PageContainer>
+      <PageHeader
+        title="Criar dieta"
+        subtitle="Gere um plano com IA ou importe a dieta do seu nutricionista"
+      />
 
       <div className="flex rounded-lg border border-border bg-muted p-1">
         <button
@@ -41,6 +40,6 @@ export function NewDietTabs() {
       </div>
 
       {tab === "generate" ? <DietGenerateForm /> : <DietImportForm />}
-    </div>
+    </PageContainer>
   )
 }

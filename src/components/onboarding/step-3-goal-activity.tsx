@@ -54,7 +54,7 @@ export function Step3GoalActivity({ data, onChange, errors }: Step3Props) {
           ))}
         </RadioGroup>
         {errors.goal && (
-          <p className="text-sm text-danger">{errors.goal}</p>
+          <p className="text-sm text-destructive">{errors.goal}</p>
         )}
       </div>
 
@@ -82,7 +82,7 @@ export function Step3GoalActivity({ data, onChange, errors }: Step3Props) {
           ))}
         </RadioGroup>
         {errors.activityLevel && (
-          <p className="text-sm text-danger">{errors.activityLevel}</p>
+          <p className="text-sm text-destructive">{errors.activityLevel}</p>
         )}
       </div>
     </div>

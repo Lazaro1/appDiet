@@ -4,8 +4,8 @@ import { getAuthenticatedUser } from "@/lib/auth/get-authenticated-user"
 import { DietPlanRepository } from "@/lib/db/repositories/diet-plan-repository"
 import { MealLogRepository } from "@/lib/db/repositories/meal-log-repository"
 import { MealCard } from "@/components/ui/meal-card"
-import { determineMealStatus } from "@/lib/nutrition/meal-status"
-import { formatTimeWindow } from "@/lib/nutrition/format"
+import { PageContainer, PageHeader } from "@/components/ui/page-container"
+import { buildDaySnapshot } from "@/lib/nutrition/day"
 
 export default async function MealsPage() {
   const result = await getAuthenticatedUser()
@@ -18,42 +18,35 @@ export default async function MealsPage() {
 
   const mealLogRepo = new MealLogRepository()
   const todayLogs = await mealLogRepo.findByUserAndDate(result.user.id, new Date())
-  const logsByMealId = new Map(
-    todayLogs.filter((l) => l.mealId).map((l) => [l.mealId!, l]),
-  )
 
-  const today = new Date()
+  const { meals } = buildDaySnapshot({
+    meals: activePlan.meals,
+    logs: todayLogs,
+    dailyTarget: result.user.dailyKcalTarget ?? activePlan.totalKcal,
+    hasActivePlan: true,
+  })
 
   return (
-    <div className="mx-auto max-w-lg space-y-6 px-4 py-6">
-      <header>
-        <h1 className="text-2xl font-bold tracking-tight text-ink">Refeições</h1>
-        <p className="text-sm text-muted-foreground">Registre suas refeições de hoje</p>
-      </header>
+    <PageContainer>
+      <PageHeader
+        title="Refeições"
+        subtitle="Registre suas refeições de hoje"
+      />
 
       <div className="space-y-3">
-        {activePlan.meals.map((meal) => {
-          const log = logsByMealId.get(meal.id)
-          const status = determineMealStatus({
-            hasLog: Boolean(log && log.status === "eaten"),
-            isWithinWindow: today.getHours() >= meal.windowStart && today.getHours() <= meal.windowEnd,
-            wasSkipped: log?.status === "skipped",
-          })
-
-          return (
-            <Link key={meal.id} href={`/meals/${meal.id}`}>
-              <MealCard
-                name={meal.name}
-                timeWindow={formatTimeWindow(meal.windowStart, meal.windowEnd)}
-                kcalTarget={meal.kcalTarget}
-                kcalConsumed={log?.parsedKcal ?? undefined}
-                status={status}
-                conformant={log?.conformant ?? undefined}
-              />
-            </Link>
-          )
-        })}
+        {meals.map((meal) => (
+          <Link key={meal.id} href={`/meals/${meal.id}`}>
+            <MealCard
+              name={meal.name}
+              timeWindow={meal.timeWindow}
+              kcalTarget={meal.kcalTarget}
+              kcalConsumed={meal.kcalConsumed}
+              status={meal.status}
+              conformant={meal.conformant}
+            />
+          </Link>
+        ))}
       </div>
-    </div>
+    </PageContainer>
   )
 }
