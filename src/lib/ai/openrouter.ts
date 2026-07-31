@@ -1,18 +1,21 @@
 import { aiSchemas, requestStructuredJson } from "./json-response"
 import {
   buildDietImportSystemPrompt,
-  DIET_PLAN_JSON_EXAMPLE,
-  DIET_PLAN_RULES,
+  buildDietPlanSystemPrompt,
+  buildDietPlanUserPrompt,
 } from "./prompts"
 import type { AIProvider, ChatMessageInput, ChatResponse, ParsedFoodItem } from "./types"
 
 const JSON_RETRY_HINT =
   "Responda APENAS com JSON válido, sem markdown, comentários ou texto fora do JSON."
 
+type ReasoningEffort = "none" | "low"
+
 interface OpenRouterConfig {
   apiKey: string
   primaryModel: string
   fallbackModel: string
+  fallbackReasoningEffort?: ReasoningEffort
   baseUrl?: string
 }
 
@@ -202,22 +205,14 @@ Retorne exatamente 3 itens em "suggestions".`,
       items: ParsedFoodItem[]
     }>
   }> {
-    const userPrompt = `Meta calórica diária: ${params.dailyKcalTarget} kcal
-Refeições por dia: ${params.mealsPerDay}
-Janelas: ${params.mealWindows.map((w) => `${w.name} (${w.startHour}h-${w.endHour}h)`).join(", ")}
-Restrições: ${params.restrictions?.join(", ") || "nenhuma"}
-Preferências: ${params.preferences?.join(", ") || "nenhuma"}
-Crie exatamente ${params.mealsPerDay} refeições, com 2 a 4 alimentos por refeição.`
+    const userPrompt = buildDietPlanUserPrompt(params)
 
     return requestStructuredJson({
       label: "diet plan",
       schema: aiSchemas.dietPlan,
       request: (attempt) =>
         this.chat({
-          systemPrompt: `Você é um nutricionista. Crie um plano alimentar diário com base no perfil do paciente.
-${DIET_PLAN_RULES}
-${JSON_RETRY_HINT}
-${DIET_PLAN_JSON_EXAMPLE}`,
+          systemPrompt: buildDietPlanSystemPrompt(),
           messages: [
             {
               role: "user",

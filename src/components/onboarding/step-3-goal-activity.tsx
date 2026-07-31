@@ -4,12 +4,12 @@ import type { LucideIcon } from "lucide-react"
 import {
   Armchair,
   Dumbbell,
+  Flame,
   Footprints,
   Info,
   Minus,
   PersonStanding,
   Scale,
-  Swords,
   TrendingUp,
 } from "lucide-react"
 import {
@@ -30,13 +30,12 @@ const GOAL_OPTIONS = [
 const ACTIVITY_OPTIONS: {
   value: keyof typeof ACTIVITY_LABELS
   icon: LucideIcon
-  wide?: boolean
 }[] = [
   { value: "sedentary", icon: Armchair },
   { value: "light", icon: Footprints },
   { value: "moderate", icon: Dumbbell },
   { value: "active", icon: PersonStanding },
-  { value: "very_active", icon: Swords, wide: true },
+  { value: "very_active", icon: Flame },
 ]
 
 interface Step3Props {
@@ -141,16 +140,13 @@ export function Step3GoalActivity({ data, onChange, errors }: Step3Props) {
       <section className="flex flex-col gap-3">
         <h2 className="text-lg font-semibold text-foreground">Nível de atividade</h2>
         <div className="grid grid-cols-2 gap-3">
-          {ACTIVITY_OPTIONS.map(({ value, icon: Icon, wide }) => {
+          {ACTIVITY_OPTIONS.map(({ value, icon: Icon }) => {
             const selected = data.activityLevel === value
             const label = ACTIVITY_LABELS[value]
             const description = ACTIVITY_DESCRIPTIONS[value]
 
             return (
-              <label
-                key={value}
-                className={cn("cursor-pointer", wide && "col-span-2")}
-              >
+              <label key={value} className="cursor-pointer">
                 <input
                   type="radio"
                   name="activityLevel"
@@ -161,10 +157,7 @@ export function Step3GoalActivity({ data, onChange, errors }: Step3Props) {
                 />
                 <div
                   className={cn(
-                    "relative h-full overflow-hidden rounded-xl border shadow-sm transition-all",
-                    wide
-                      ? "flex items-center justify-between gap-3 p-3 lg:flex-col lg:justify-center lg:gap-2 lg:p-4 lg:text-center"
-                      : "flex flex-col justify-center p-3 lg:items-center lg:gap-2 lg:p-4 lg:text-center",
+                    "relative flex h-full flex-col items-center gap-2 overflow-hidden rounded-xl border p-3 text-center shadow-sm transition-all lg:gap-3 lg:p-4",
                     selected
                       ? "border-2 border-signature-teal bg-primary/10"
                       : "border-border bg-surface hover:bg-surface-raised",
@@ -176,18 +169,21 @@ export function Step3GoalActivity({ data, onChange, errors }: Step3Props) {
                       aria-hidden
                     />
                   )}
-                  <Icon
+                  <div
                     className={cn(
-                      "relative hidden size-8 shrink-0 lg:block",
-                      selected ? "text-signature-teal" : "text-muted-foreground",
+                      "relative flex size-10 shrink-0 items-center justify-center rounded-full",
+                      selected
+                        ? "bg-signature-teal/20 text-signature-teal"
+                        : "bg-surface-raised text-muted-foreground",
                     )}
-                    aria-hidden
-                  />
-                  <div className={cn("relative min-w-0", wide && "flex-1 lg:flex-none")}>
+                  >
+                    <Icon className="size-5" aria-hidden />
+                  </div>
+                  <div className="relative min-w-0">
                     <p
                       className={cn(
                         "text-base font-medium",
-                        selected && "font-semibold text-signature-teal lg:text-signature-teal",
+                        selected && "font-semibold text-signature-teal",
                       )}
                     >
                       {label}
@@ -196,7 +192,10 @@ export function Step3GoalActivity({ data, onChange, errors }: Step3Props) {
                       {description}
                     </p>
                   </div>
-                  {wide && <SelectionDot selected={selected} className="relative lg:hidden" />}
+                  <SelectionDot
+                    selected={selected}
+                    className="absolute top-3 right-3"
+                  />
                 </div>
               </label>
             )

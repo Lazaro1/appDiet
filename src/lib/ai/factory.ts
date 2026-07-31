@@ -30,10 +30,14 @@ export function getAIProvider(): AIProvider {
     throw new Error("OPENROUTER_API_KEY is not set. Use AI_PROVIDER=mock for local development.")
   }
 
+  const fallbackReasoningEffort =
+    process.env.OPENROUTER_FALLBACK_REASONING_EFFORT === "low" ? "low" : "none"
+
   _instance = new OpenRouterProvider({
     apiKey,
     primaryModel: process.env.OPENROUTER_PRIMARY_MODEL ?? "deepseek/deepseek-v4-flash",
-    fallbackModel: process.env.OPENROUTER_FALLBACK_MODEL ?? "openai/gpt-4o-mini",
+    fallbackModel: process.env.OPENROUTER_FALLBACK_MODEL ?? "openai/gpt-5.6-luna",
+    fallbackReasoningEffort,
   })
 
   return _instance
