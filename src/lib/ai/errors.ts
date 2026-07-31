@@ -6,6 +6,10 @@ export function toUserFacingAiError(err: unknown): string {
 
   const message = err.message.toLowerCase()
 
+  if (message.includes("empty") || message.includes("truncated")) {
+    return "A IA não conseguiu estruturar a dieta. Tente novamente ou cole um trecho menor por vez."
+  }
+
   if (message.includes("json") || message.includes("validation")) {
     return "A IA retornou uma resposta inválida. Tente gerar novamente."
   }

@@ -42,9 +42,13 @@ export function mapAiPlanToCreateInput(params: {
   }>
 }) {
   const meals = params.aiMeals.map((meal, index) => {
-    const preset = params.mealPresets[index] ?? params.mealPresets[params.mealPresets.length - 1]
-    return {
+    const preset = params.mealPresets[index] ?? {
       name: meal.name,
+      windowStart: Math.min(21, 6 + index * 3),
+      windowEnd: Math.min(23, 9 + index * 3),
+    }
+    return {
+      name: meal.name || preset.name,
       kcalTarget: meal.kcalTarget,
       windowStart: preset.windowStart,
       windowEnd: preset.windowEnd,

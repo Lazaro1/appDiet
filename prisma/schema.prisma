@@ -84,6 +84,7 @@ model User {
 
   dietPlans    DietPlan[]
   mealLogs     MealLog[]
+  mealSwapLogs MealSwapLog[]
   weightLogs   WeightLog[]
   chatMessages ChatMessage[]
 }
@@ -136,6 +137,7 @@ model Meal {
   dietPlan  DietPlan   @relation(fields: [dietPlanId], references: [id], onDelete: Cascade)
   mealItems MealItem[]
   mealLogs  MealLog[]
+  mealSwapLogs MealSwapLog[]
 
   @@index([dietPlanId, order])
 }
@@ -182,6 +184,31 @@ model MealLog {
   meal Meal? @relation(fields: [mealId], references: [id])
 
   @@index([userId, date])
+}
+
+// ──────────────────────────────────────────────
+// MealSwapLog — Food swap choices applied to a meal log day
+// ──────────────────────────────────────────────
+model MealSwapLog {
+  id               String   @id @default(cuid())
+  userId           String
+  mealId           String
+  mealItemId       String?
+  date             DateTime
+  originalItemName String
+  originalKcal     Float?
+  originalProtein  Float?
+  chosenName       String
+  chosenKcal       Float
+  chosenProtein    Float
+  description      String?
+  createdAt        DateTime @default(now())
+
+  user User @relation(fields: [userId], references: [id])
+  meal Meal @relation(fields: [mealId], references: [id])
+
+  @@index([userId, date])
+  @@index([mealId])
 }
 
 // ──────────────────────────────────────────────

@@ -1,20 +1,22 @@
 "use client"
 
 import { Plus } from "lucide-react"
-import { useRouter } from "next/navigation"
+import { usePathname, useRouter } from "next/navigation"
 import { useDay } from "@/components/providers/day-provider"
 import { cn } from "@/lib/utils"
 
 /**
  * Floating action button that jumps to the next meal to register. Derives its
  * target from the shared DayProvider, so logging a meal updates it instantly.
- * Renders nothing when the day is complete.
+ * Renders nothing when the day is complete or on the chat screen.
  */
 export function Fab() {
   const router = useRouter()
+  const pathname = usePathname()
   const { nextPendingHref, hasActivePlan } = useDay()
 
-  if (!nextPendingHref) return null
+  if (!nextPendingHref || pathname.startsWith("/chat") || pathname.startsWith("/meals/"))
+    return null
 
   return (
     <button

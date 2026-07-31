@@ -67,6 +67,25 @@ export function isConformant(consumed: number, target: number): boolean {
   return ratio >= 0.9 && ratio <= 1.1
 }
 
+/** Whether the given hour falls inside a meal's planned window */
+export function isMealWithinWindow(
+  hour: number,
+  windowStart: number,
+  windowEnd: number,
+): boolean {
+  return hour >= windowStart && hour <= windowEnd
+}
+
+/** DB log statuses that represent a completed (non-skipped) registration */
+export function isLoggedLogStatus(status: string): boolean {
+  return status === "eaten" || status === "out_of_window"
+}
+
+/** UI meal statuses that mean the patient already registered this meal */
+export function isMealLogged(status: MealStatus): boolean {
+  return status === "eaten" || status === "out_of_window"
+}
+
 /** Determine meal status from a meal log */
 export function determineMealStatus(params: {
   hasLog: boolean

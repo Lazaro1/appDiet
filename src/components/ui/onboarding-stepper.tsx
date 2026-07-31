@@ -6,14 +6,27 @@ interface OnboardingStepperProps {
   steps: number
   /** Current step (0-indexed) */
   currentStep: number
+  className?: string
 }
 
 export function OnboardingStepper({
   steps,
   currentStep,
+  className,
 }: OnboardingStepperProps) {
   return (
-    <div className="flex items-center justify-center gap-2 md:gap-3">
+    <div
+      className={cn(
+        "relative flex w-full max-w-[320px] items-center justify-between px-1 py-2",
+        className,
+      )}
+      aria-label={`Passo ${currentStep + 1} de ${steps}`}
+    >
+      <div
+        className="absolute top-1/2 right-6 left-6 z-0 h-0.5 -translate-y-1/2 bg-border"
+        aria-hidden
+      />
+
       {Array.from({ length: steps }, (_, i) => {
         const isActive = i === currentStep
         const isCompleted = i < currentStep
@@ -21,18 +34,27 @@ export function OnboardingStepper({
         return (
           <div
             key={i}
-            className={cn(
-              "flex items-center justify-center rounded-full transition-all duration-300",
-              isCompleted && "h-5 w-5 md:h-6 md:w-6 bg-primary",
-              isActive && "h-2 w-2 md:h-3 md:w-3 bg-primary",
-              !isActive && !isCompleted && "h-2 w-2 md:h-3 md:w-3 bg-border",
-            )}
+            className="relative z-10 flex flex-col items-center"
             aria-current={isActive ? "step" : undefined}
-            aria-label={`Passo ${i + 1}`}
           >
-            {isCompleted && (
-              <Check size={14} className="text-on-primary" strokeWidth={3} />
-            )}
+            <div
+              className={cn(
+                "flex size-8 items-center justify-center rounded-full text-sm font-semibold shadow-sm transition-all duration-300",
+                isCompleted &&
+                  "border border-signature-teal bg-signature-teal text-on-primary",
+                isActive &&
+                  "border border-signature-teal bg-signature-teal text-on-primary",
+                !isActive &&
+                  !isCompleted &&
+                  "border-2 border-border bg-canvas text-muted-foreground",
+              )}
+            >
+              {isCompleted ? (
+                <Check className="size-4" strokeWidth={3} aria-hidden />
+              ) : (
+                i + 1
+              )}
+            </div>
           </div>
         )
       })}

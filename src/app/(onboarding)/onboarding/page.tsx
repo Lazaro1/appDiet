@@ -9,7 +9,7 @@ export default async function OnboardingPage() {
 
   // Check if user already completed onboarding
   const userRepo = new UserRepository()
-  const user = await userRepo.findByClerkId(clerkId)
+  let user = await userRepo.findByClerkId(clerkId)
 
   if (!user) {
     // Auto-create user from Clerk data
@@ -19,8 +19,10 @@ export default async function OnboardingPage() {
     const name = clerkUser.fullName || clerkUser.firstName || "Paciente"
     const email = clerkUser.emailAddresses[0]?.emailAddress || ""
 
-    await userRepo.create({ clerkId, name, email })
-  } else if (user.onboardingCompleted) {
+    user = await userRepo.findOrCreateByClerkId({ clerkId, name, email })
+  }
+
+  if (user.onboardingCompleted) {
     redirect("/")
   }
 

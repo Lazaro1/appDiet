@@ -3,15 +3,24 @@ import { DietPlanRepository } from "@/lib/db/repositories/diet-plan-repository"
 import { MealLogRepository } from "@/lib/db/repositories/meal-log-repository"
 import { getAIProvider } from "@/lib/ai/factory"
 import { isConformant } from "@/lib/nutrition/adherence"
+import {
+  getMealLogDateError,
+  isTodayDate,
+  resolveMealLogDate,
+} from "@/lib/nutrition/meal-dates"
+import { isMealWithinWindow } from "@/lib/nutrition/meal-status"
 
 export async function GET(
-  _request: Request,
+  request: Request,
   { params }: { params: Promise<{ id: string }> },
 ) {
   const { user, error } = await requireApiUser()
   if (error) return error
 
   const { id } = await params
+  const { searchParams } = new URL(request.url)
+  const logDate = resolveMealLogDate(searchParams.get("date"))
+
   const dietRepo = new DietPlanRepository()
   const activePlan = await dietRepo.findActiveByUserId(user!.id)
 
@@ -21,8 +30,8 @@ export async function GET(
   if (!meal) return apiError("Refeição não encontrada", 404)
 
   const mealLogRepo = new MealLogRepository()
-  const todayLogs = await mealLogRepo.findByUserAndDate(user!.id, new Date())
-  const log = todayLogs.find((l) => l.mealId === id)
+  const dayLogs = await mealLogRepo.findByUserAndDate(user!.id, logDate)
+  const log = dayLogs.find((l) => l.mealId === id)
 
   return apiSuccess({ meal, log, planId: activePlan.id })
 }
@@ -46,15 +55,28 @@ export async function POST(
   if (!meal) return apiError("Refeição não encontrada", 404)
 
   const mealLogRepo = new MealLogRepository()
-  const today = new Date()
+  const logDate = resolveMealLogDate(body.date as string | undefined)
+  const dateError = getMealLogDateError(logDate)
+  if (dateError) return apiError(dateError, 400)
 
   if (action === "skip") {
-    const log = await mealLogRepo.create({
-      userId: user!.id,
-      mealId: id,
-      date: today,
-      status: "skipped",
-    })
+    const existingLog = await mealLogRepo.findByUserMealAndDate(user!.id, id, logDate)
+    const log = existingLog
+      ? await mealLogRepo.update(existingLog.id, {
+          status: "skipped",
+          rawText: null,
+          parsedKcal: null,
+          parsedProtein: null,
+          parsedCarbs: null,
+          parsedFat: null,
+          conformant: null,
+        })
+      : await mealLogRepo.create({
+          userId: user!.id,
+          mealId: id,
+          date: logDate,
+          status: "skipped",
+        })
     return apiSuccess({ log })
   }
 
@@ -73,19 +95,38 @@ export async function POST(
     const parsedCarbs = items.reduce((s, i) => s + i.estimatedCarbs, 0)
     const parsedFat = items.reduce((s, i) => s + i.estimatedFat, 0)
     const conformant = isConformant(parsedKcal, meal.kcalTarget)
+    const withinWindow = isTodayDate(logDate)
+      ? isMealWithinWindow(
+          new Date().getHours(),
+          meal.windowStart,
+          meal.windowEnd,
+        )
+      : true
+    const logStatus = withinWindow ? "eaten" : "out_of_window"
 
-    const log = await mealLogRepo.create({
-      userId: user!.id,
-      mealId: id,
-      date: today,
-      status: "eaten",
-      rawText: text,
-      parsedKcal,
-      parsedProtein,
-      parsedCarbs,
-      parsedFat,
-      conformant,
-    })
+    const existingLog = await mealLogRepo.findByUserMealAndDate(user!.id, id, logDate)
+    const log = existingLog
+      ? await mealLogRepo.update(existingLog.id, {
+          status: logStatus,
+          rawText: text,
+          parsedKcal,
+          parsedProtein,
+          parsedCarbs,
+          parsedFat,
+          conformant,
+        })
+      : await mealLogRepo.create({
+          userId: user!.id,
+          mealId: id,
+          date: logDate,
+          status: logStatus,
+          rawText: text,
+          parsedKcal,
+          parsedProtein,
+          parsedCarbs,
+          parsedFat,
+          conformant,
+        })
 
     return apiSuccess({ log, items })
   } catch (err) {

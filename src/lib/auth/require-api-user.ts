@@ -33,7 +33,7 @@ export async function requireApiUser(options?: {
 
     const name = clerkUser.fullName || clerkUser.firstName || "Paciente"
     const email = clerkUser.emailAddresses[0]?.emailAddress || ""
-    user = await userRepo.create({ clerkId, name, email })
+    user = await userRepo.findOrCreateByClerkId({ clerkId, name, email })
   }
 
   if (options?.requireOnboarding !== false && !user.onboardingCompleted) {

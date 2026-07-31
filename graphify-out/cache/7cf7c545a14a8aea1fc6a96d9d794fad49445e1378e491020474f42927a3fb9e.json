@@ -1,0 +1,1 @@
+{"nodes": [{"id": "readme_nextjs", "label": "Next.js Boilerplate README", "file_type": "document", "source_file": "README.md", "source_location": "L1"}], "edges": [{"source": "readme_nextjs", "target": "architecture_nextjs", "relation": "references", "confidence": "EXTRACTED", "confidence_score": 1.0, "source_file": "README.md", "source_location": "L1"}], "hyperedges": []}

@@ -1,4 +1,9 @@
 import { aiSchemas, requestStructuredJson } from "./json-response"
+import {
+  buildDietImportSystemPrompt,
+  DIET_PLAN_JSON_EXAMPLE,
+  DIET_PLAN_RULES,
+} from "./prompts"
 import type { AIProvider, ChatMessageInput, ChatResponse, ParsedFoodItem } from "./types"
 
 const JSON_RETRY_HINT =
@@ -52,25 +57,30 @@ export class OpenRouterProvider implements AIProvider {
     systemPrompt?: string
     temperature?: number
     maxTokens?: number
+    jsonMode?: boolean
+    model?: string
   }): Promise<ChatResponse> {
     const messages = params.systemPrompt
       ? [{ role: "system" as const, content: params.systemPrompt }, ...params.messages]
       : params.messages
 
+    const requestBody = {
+      messages,
+      temperature: params.temperature ?? 0.7,
+      max_tokens: params.maxTokens ?? 1024,
+      ...(params.jsonMode ? { response_format: { type: "json_object" as const } } : {}),
+    }
+
+    if (params.model) {
+      return this.makeRequest(params.model, requestBody)
+    }
+
     try {
-      return await this.makeRequest(this.config.primaryModel, {
-        messages,
-        temperature: params.temperature ?? 0.7,
-        max_tokens: params.maxTokens ?? 1024,
-      })
+      return await this.makeRequest(this.config.primaryModel, requestBody)
     } catch (primaryError) {
       console.warn(`Primary model ${this.config.primaryModel} failed, falling back to ${this.config.fallbackModel}:`, primaryError)
       try {
-        return await this.makeRequest(this.config.fallbackModel, {
-          messages,
-          temperature: params.temperature ?? 0.7,
-          max_tokens: params.maxTokens ?? 1024,
-        })
+        return await this.makeRequest(this.config.fallbackModel, requestBody)
       } catch (fallbackError) {
         throw new Error("Both primary and fallback AI models failed. Please try again in a few minutes.")
       }
@@ -82,13 +92,14 @@ export class OpenRouterProvider implements AIProvider {
 
     return requestStructuredJson({
       label: "meal parse",
-      schema: aiSchemas.parsedFoodItems,
+      schema: aiSchemas.parsedFoodItemsResponse,
+      maxAttempts: 2,
       request: (attempt) =>
         this.chat({
           systemPrompt: `Você é um parser de refeições. Parseie a descrição da refeição em alimentos estruturados.
 Para cada alimento, estime a porção em gramas com base no contexto brasileiro.
 ${JSON_RETRY_HINT}
-[{"foodName":"nome","estimatedGrams":0,"estimatedKcal":0,"estimatedProtein":0,"estimatedCarbs":0,"estimatedFat":0}]${contextStr}`,
+{"items":[{"foodName":"nome","estimatedGrams":0,"estimatedKcal":0,"estimatedProtein":0,"estimatedCarbs":0,"estimatedFat":0}]}${contextStr}`,
           messages: [
             {
               role: "user",
@@ -99,39 +110,43 @@ ${JSON_RETRY_HINT}
             },
           ],
           temperature: 0.2,
-          maxTokens: 1024,
+          maxTokens: 768,
+          jsonMode: true,
+          model: attempt > 1 ? this.config.fallbackModel : undefined,
         }),
-    })
+    }).then((result) => result.items)
   }
 
   async importDietPlan(
     text: string,
     mealWindows: Array<{ name: string; startHour: number; endHour: number }>,
+    options?: { dailyKcalTarget?: number; mealCountHint?: number },
   ): Promise<{
     meals: Array<{ name: string; kcalTarget: number; items: ParsedFoodItem[] }>
   }> {
-    const windowsStr = mealWindows.map((w) => `${w.name} (${w.startHour}h-${w.endHour}h)`).join(", ")
-
     return requestStructuredJson({
       label: "diet import",
       schema: aiSchemas.dietPlan,
       request: (attempt) =>
         this.chat({
-          systemPrompt: `Você é um parser de dietas. Converta o texto da dieta em um plano estruturado.
-Use as janelas de refeição: ${windowsStr}
-${JSON_RETRY_HINT}
-{"meals":[{"name":"nome","kcalTarget":0,"items":[{"foodName":"nome","estimatedGrams":0,"estimatedKcal":0,"estimatedProtein":0,"estimatedCarbs":0,"estimatedFat":0}]}]}`,
+          systemPrompt: buildDietImportSystemPrompt({
+            mealWindows,
+            dailyKcalTarget: options?.dailyKcalTarget,
+            mealCountHint: options?.mealCountHint,
+          }),
           messages: [
             {
               role: "user",
               content:
                 attempt > 1
-                  ? `${text}\n\nA resposta anterior não era JSON válido. ${JSON_RETRY_HINT}`
+                  ? `${text}\n\nA resposta anterior veio vazia ou inválida. ${JSON_RETRY_HINT}`
                   : text,
             },
           ],
           temperature: 0.2,
-          maxTokens: 4096,
+          maxTokens: 8192,
+          jsonMode: true,
+          model: attempt > 1 ? this.config.fallbackModel : undefined,
         }),
     })
   }
@@ -149,12 +164,14 @@ Meta da refeição: ${params.mealKcalTarget} kcal. Sugira 3 alternativas.`
 
     return requestStructuredJson({
       label: "swap suggestions",
-      schema: aiSchemas.swapSuggestions,
+      schema: aiSchemas.swapSuggestionsResponse,
+      maxAttempts: 2,
       request: (attempt) =>
         this.chat({
-          systemPrompt: `Você sugere trocas alimentares equivalentes em calorias e macros.
+          systemPrompt: `Você sugere trocas alimentares equivalentes em calorias e macros para o contexto brasileiro.
 ${JSON_RETRY_HINT}
-[{"name":"alimento","kcal":0,"protein":0,"description":"breve explicação"}]`,
+{"suggestions":[{"name":"alimento","kcal":0,"protein":0,"description":"breve explicação"}]}
+Retorne exatamente 3 itens em "suggestions".`,
           messages: [
             {
               role: "user",
@@ -164,10 +181,12 @@ ${JSON_RETRY_HINT}
                   : userPrompt,
             },
           ],
-          temperature: 0.4,
-          maxTokens: 1024,
+          temperature: 0.2,
+          maxTokens: 512,
+          jsonMode: true,
+          model: attempt > 1 ? this.config.fallbackModel : undefined,
         }),
-    })
+    }).then((result) => result.suggestions)
   }
 
   async generateDietPlan(params: {
@@ -196,8 +215,9 @@ Crie exatamente ${params.mealsPerDay} refeições, com 2 a 4 alimentos por refei
       request: (attempt) =>
         this.chat({
           systemPrompt: `Você é um nutricionista. Crie um plano alimentar diário com base no perfil do paciente.
+${DIET_PLAN_RULES}
 ${JSON_RETRY_HINT}
-{"meals":[{"name":"nome","kcalTarget":0,"items":[{"foodName":"nome","estimatedGrams":0,"estimatedKcal":0,"estimatedProtein":0,"estimatedCarbs":0,"estimatedFat":0}]}]}`,
+${DIET_PLAN_JSON_EXAMPLE}`,
           messages: [
             {
               role: "user",
@@ -209,6 +229,8 @@ ${JSON_RETRY_HINT}
           ],
           temperature: 0.3,
           maxTokens: 4096,
+          jsonMode: true,
+          model: attempt > 1 ? this.config.fallbackModel : undefined,
         }),
     })
   }
@@ -271,13 +293,57 @@ ${JSON_RETRY_HINT}
     }
 
     const data = await res.json()
+    const choice = data.choices?.[0]
+    const content = this.extractMessageContent(choice?.message)
+
+    if (!content.trim()) {
+      const finishReason = choice?.finish_reason
+      if (finishReason === "length") {
+        throw new Error("OpenRouter response truncated (finish_reason=length)")
+      }
+      if (process.env.NODE_ENV === "development") {
+        console.warn("[OpenRouter] Empty message content", {
+          model,
+          finishReason,
+          messageKeys: choice?.message ? Object.keys(choice.message) : [],
+        })
+      }
+    }
+
     return {
-      content: data.choices?.[0]?.message?.content ?? "",
+      content,
       model: data.model ?? model,
       usage: data.usage ? {
         promptTokens: data.usage.prompt_tokens,
         completionTokens: data.usage.completion_tokens,
       } : undefined,
     }
+  }
+
+  private extractMessageContent(message: Record<string, unknown> | undefined): string {
+    if (!message) return ""
+
+    const content = message.content
+    if (typeof content === "string" && content.trim()) {
+      return content
+    }
+
+    if (Array.isArray(content)) {
+      const text = content
+        .filter(
+          (part): part is { type?: string; text?: string } =>
+            typeof part === "object" && part !== null,
+        )
+        .map((part) => (part.type === "text" ? part.text ?? "" : ""))
+        .join("")
+      if (text.trim()) return text
+    }
+
+    const reasoning = message.reasoning ?? message.reasoning_content
+    if (typeof reasoning === "string" && reasoning.trim()) {
+      return reasoning
+    }
+
+    return typeof content === "string" ? content : ""
   }
 }

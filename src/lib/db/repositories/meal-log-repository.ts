@@ -28,6 +28,15 @@ export class MealLogRepository {
     })
   }
 
+  async findByUserMealAndDate(
+    userId: string,
+    mealId: string,
+    date: Date,
+  ): Promise<MealLog | null> {
+    const logs = await this.findByUserAndDate(userId, date)
+    return logs.find((log) => log.mealId === mealId) ?? null
+  }
+
   async create(data: {
     userId: string
     mealId?: string
@@ -44,11 +53,12 @@ export class MealLogRepository {
   }
 
   async update(id: string, data: {
-    parsedKcal?: number
-    parsedProtein?: number
-    parsedCarbs?: number
-    parsedFat?: number
-    conformant?: boolean
+    rawText?: string | null
+    parsedKcal?: number | null
+    parsedProtein?: number | null
+    parsedCarbs?: number | null
+    parsedFat?: number | null
+    conformant?: boolean | null
     status?: MealLogStatus
   }): Promise<MealLog> {
     return prisma.mealLog.update({ where: { id }, data })

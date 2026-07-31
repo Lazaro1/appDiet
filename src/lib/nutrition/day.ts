@@ -1,4 +1,9 @@
-import { determineMealStatus, type MealStatus } from "./meal-status"
+import {
+  determineMealStatus,
+  isLoggedLogStatus,
+  isMealWithinWindow,
+  type MealStatus,
+} from "./meal-status"
 import { formatTimeWindow } from "./format"
 
 export interface DayMealSnapshot {
@@ -31,6 +36,7 @@ interface MealLogInput {
   status: string
   parsedKcal: number | null
   conformant: boolean | null
+  createdAt?: Date | string
 }
 
 /**
@@ -45,18 +51,22 @@ export function buildDaySnapshot(params: {
   hasActivePlan: boolean
   now?: Date
 }): DaySnapshot {
-  const now = params.now ?? new Date()
-  const hour = now.getHours()
-
   const logsByMealId = new Map(
     params.logs.filter((l) => l.mealId).map((l) => [l.mealId!, l]),
   )
 
   const meals: DayMealSnapshot[] = params.meals.map((meal) => {
     const log = logsByMealId.get(meal.id)
+    const logHour = log?.createdAt
+      ? new Date(log.createdAt).getHours()
+      : (params.now ?? new Date()).getHours()
     const status = determineMealStatus({
-      hasLog: Boolean(log && log.status === "eaten"),
-      isWithinWindow: hour >= meal.windowStart && hour <= meal.windowEnd,
+      hasLog: Boolean(log && isLoggedLogStatus(log.status)),
+      isWithinWindow: isMealWithinWindow(
+        logHour,
+        meal.windowStart,
+        meal.windowEnd,
+      ),
       wasSkipped: log?.status === "skipped",
     })
 
@@ -72,7 +82,7 @@ export function buildDaySnapshot(params: {
   })
 
   const consumedToday = params.logs
-    .filter((log) => log.status === "eaten")
+    .filter((log) => isLoggedLogStatus(log.status))
     .reduce((sum, log) => sum + (log.parsedKcal ?? 0), 0)
 
   return {

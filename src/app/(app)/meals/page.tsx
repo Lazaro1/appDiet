@@ -1,11 +1,11 @@
-import Link from "next/link"
 import { redirect } from "next/navigation"
 import { getAuthenticatedUser } from "@/lib/auth/get-authenticated-user"
 import { DietPlanRepository } from "@/lib/db/repositories/diet-plan-repository"
 import { MealLogRepository } from "@/lib/db/repositories/meal-log-repository"
-import { MealCard } from "@/components/ui/meal-card"
-import { PageContainer, PageHeader } from "@/components/ui/page-container"
+import { MealsView } from "@/components/meals/meals-view"
 import { buildDaySnapshot } from "@/lib/nutrition/day"
+import { formatTimeWindow } from "@/lib/nutrition/format"
+import { toDateKey, type MealsPageMeal } from "@/lib/nutrition/meal-display"
 
 export default async function MealsPage() {
   const result = await getAuthenticatedUser()
@@ -17,36 +17,50 @@ export default async function MealsPage() {
   if (!activePlan) redirect("/diet/new")
 
   const mealLogRepo = new MealLogRepository()
-  const todayLogs = await mealLogRepo.findByUserAndDate(result.user.id, new Date())
+  const today = new Date()
+  const todayLogs = await mealLogRepo.findByUserAndDate(result.user.id, today)
 
-  const { meals } = buildDaySnapshot({
+  const dailyTarget = result.user.dailyKcalTarget ?? activePlan.totalKcal
+
+  const snapshot = buildDaySnapshot({
     meals: activePlan.meals,
     logs: todayLogs,
-    dailyTarget: result.user.dailyKcalTarget ?? activePlan.totalKcal,
+    dailyTarget,
     hasActivePlan: true,
   })
 
-  return (
-    <PageContainer>
-      <PageHeader
-        title="Refeições"
-        subtitle="Registre suas refeições de hoje"
-      />
+  const planMeals: MealsPageMeal[] = activePlan.meals.map((meal) => {
+    const snap = snapshot.meals.find((m) => m.id === meal.id)
 
-      <div className="space-y-3">
-        {meals.map((meal) => (
-          <Link key={meal.id} href={`/meals/${meal.id}`}>
-            <MealCard
-              name={meal.name}
-              timeWindow={meal.timeWindow}
-              kcalTarget={meal.kcalTarget}
-              kcalConsumed={meal.kcalConsumed}
-              status={meal.status}
-              conformant={meal.conformant}
-            />
-          </Link>
-        ))}
-      </div>
-    </PageContainer>
+    return {
+      id: meal.id,
+      name: meal.name,
+      windowStart: meal.windowStart,
+      windowEnd: meal.windowEnd,
+      timeWindow: formatTimeWindow(meal.windowStart, meal.windowEnd),
+      kcalTarget: meal.kcalTarget,
+      kcalConsumed: snap?.kcalConsumed,
+      status: snap?.status ?? "pending",
+      conformant: snap?.conformant,
+      items: meal.mealItems.map((item) => ({
+        id: item.id,
+        name: item.name,
+        quantity: item.quantity,
+        unit: item.unit,
+        kcal: item.kcal,
+        protein: item.protein,
+        carbs: item.carbs,
+        fat: item.fat,
+      })),
+    }
+  })
+
+  return (
+    <MealsView
+      planMeals={planMeals}
+      dailyTarget={dailyTarget}
+      initialConsumed={snapshot.consumedToday}
+      initialDate={toDateKey(today)}
+    />
   )
 }

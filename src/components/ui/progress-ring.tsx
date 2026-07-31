@@ -11,6 +11,8 @@ interface ProgressRingProps {
   label?: string
   /** Override fill stroke color (Tailwind text-* class, e.g. "text-accent-warm") */
   color?: string
+  /** Override percentage text color */
+  valueClassName?: string
 }
 
 export function ProgressRing({
@@ -19,6 +21,7 @@ export function ProgressRing({
   strokeWidth = 10,
   label,
   color,
+  valueClassName,
 }: ProgressRingProps) {
   const clampedPercentage = Math.min(Math.max(percentage, 0), 100)
   const radius = (size - strokeWidth) / 2
@@ -59,7 +62,12 @@ export function ProgressRing({
         />
       </svg>
       <div className="absolute inset-0 flex flex-col items-center justify-center">
-        <span className="font-tabular-nums text-[28px] font-bold tracking-tight text-ink">
+        <span
+          className={cn(
+            "font-tabular-nums text-[28px] font-bold tracking-tight text-ink",
+            valueClassName,
+          )}
+        >
           {Math.round(clampedPercentage)}%
         </span>
         {label && (

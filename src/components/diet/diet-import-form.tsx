@@ -27,12 +27,13 @@ export function DietImportForm() {
   return (
     <div className="space-y-4">
       <p className="text-sm text-muted-foreground">
-        Cole o texto da dieta que você recebeu do nutricionista. A IA vai estruturar as refeições.
+        Cole o texto da dieta que você recebeu do nutricionista. A IA vai estruturar as refeições,
+        incluindo opções alternativas (marcadas como Opção A, Opção B, etc.).
       </p>
       <Textarea
         value={text}
         onChange={(e) => setText(e.target.value)}
-        placeholder="Ex: Café da manhã: 2 ovos, 1 fatia de pão integral, café..."
+        placeholder="Cole aqui o plano completo: macros, refeições, horários e alternativas..."
         className="min-h-[200px]"
         aria-invalid={Boolean(error)}
       />

@@ -1,12 +1,10 @@
 "use client"
 
+import { AlertCircle, Info } from "lucide-react"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
-
-interface Step2Data {
-  weight?: number
-  height?: number
-}
+import type { Step2Data } from "@/lib/onboarding/types"
+import { cn } from "@/lib/utils"
 
 interface Step2Props {
   data: Partial<Step2Data>
@@ -16,10 +14,15 @@ interface Step2Props {
 
 export function Step2Measurements({ data, onChange, errors }: Step2Props) {
   return (
-    <div className="flex flex-col gap-6">
+    <div className="flex flex-col gap-5 lg:gap-6">
       {/* Weight */}
-      <div className="flex flex-col gap-2">
-        <Label htmlFor="weight">Peso</Label>
+      <div className="flex flex-col gap-1">
+        <Label
+          htmlFor="weight"
+          className="text-xs font-semibold tracking-wide text-foreground uppercase"
+        >
+          Peso
+        </Label>
         <div className="relative">
           <Input
             id="weight"
@@ -29,23 +32,46 @@ export function Step2Measurements({ data, onChange, errors }: Step2Props) {
             value={data.weight ?? ""}
             onChange={(e) => onChange("weight", e.target.value)}
             aria-invalid={!!errors.weight}
-            className="h-12 rounded-xl px-4 pr-12 text-base"
+            aria-describedby={errors.weight ? "weight-error" : undefined}
+            className={cn(
+              "h-12 rounded-xl border bg-surface px-4 pr-12 text-base shadow-sm [appearance:textfield] [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none",
+              errors.weight
+                ? "border-destructive pr-12 focus-visible:border-destructive focus-visible:ring-destructive/20"
+                : "border-border focus-visible:border-signature-teal focus-visible:ring-signature-teal/30",
+            )}
             min={30}
             max={300}
             step={0.1}
           />
-          <span className="absolute top-1/2 right-4 -translate-y-1/2 text-sm text-muted-foreground">
+          <span className="pointer-events-none absolute top-1/2 right-4 -translate-y-1/2 text-sm font-medium text-muted-foreground">
             kg
           </span>
+          {errors.weight && (
+            <AlertCircle
+              className="pointer-events-none absolute top-1/2 right-11 size-5 -translate-y-1/2 text-destructive"
+              aria-hidden
+            />
+          )}
         </div>
         {errors.weight && (
-          <p className="text-sm text-destructive">{errors.weight}</p>
+          <p
+            id="weight-error"
+            className="mt-1 flex items-center gap-1 text-[11px] font-medium text-destructive"
+          >
+            <Info className="size-3.5 shrink-0" aria-hidden />
+            {errors.weight}
+          </p>
         )}
       </div>
 
       {/* Height */}
-      <div className="flex flex-col gap-2">
-        <Label htmlFor="height">Altura</Label>
+      <div className="flex flex-col gap-1">
+        <Label
+          htmlFor="height"
+          className="text-xs font-semibold tracking-wide text-foreground uppercase"
+        >
+          Altura
+        </Label>
         <div className="relative">
           <Input
             id="height"
@@ -55,17 +81,35 @@ export function Step2Measurements({ data, onChange, errors }: Step2Props) {
             value={data.height ?? ""}
             onChange={(e) => onChange("height", e.target.value)}
             aria-invalid={!!errors.height}
-            className="h-12 rounded-xl px-4 pr-12 text-base"
+            aria-describedby={errors.height ? "height-error" : undefined}
+            className={cn(
+              "h-12 rounded-xl border bg-surface px-4 pr-12 text-base shadow-sm [appearance:textfield] [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none",
+              errors.height
+                ? "border-destructive focus-visible:border-destructive focus-visible:ring-destructive/20"
+                : "border-border focus-visible:border-signature-teal focus-visible:ring-signature-teal/30",
+            )}
             min={100}
             max={250}
             step={1}
           />
-          <span className="absolute top-1/2 right-4 -translate-y-1/2 text-sm text-muted-foreground">
+          <span className="pointer-events-none absolute top-1/2 right-4 -translate-y-1/2 text-sm font-medium text-muted-foreground">
             cm
           </span>
+          {errors.height && (
+            <AlertCircle
+              className="pointer-events-none absolute top-1/2 right-11 size-5 -translate-y-1/2 text-destructive"
+              aria-hidden
+            />
+          )}
         </div>
         {errors.height && (
-          <p className="text-sm text-destructive">{errors.height}</p>
+          <p
+            id="height-error"
+            className="mt-1 flex items-center gap-1 text-[11px] font-medium text-destructive"
+          >
+            <Info className="size-3.5 shrink-0" aria-hidden />
+            {errors.height}
+          </p>
         )}
       </div>
     </div>

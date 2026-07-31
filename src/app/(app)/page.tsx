@@ -2,6 +2,7 @@ import { redirect } from "next/navigation"
 import { getAuthenticatedUser } from "@/lib/auth/get-authenticated-user"
 import { DietPlanRepository } from "@/lib/db/repositories/diet-plan-repository"
 import { MealLogRepository } from "@/lib/db/repositories/meal-log-repository"
+import { WeightLogRepository } from "@/lib/db/repositories/weight-log-repository"
 import { DashboardView } from "@/components/dashboard/dashboard-view"
 import { calculateAdherence } from "@/lib/nutrition/adherence"
 
@@ -24,10 +25,12 @@ export default async function DashboardPage() {
 
   const dietRepo = new DietPlanRepository()
   const mealLogRepo = new MealLogRepository()
+  const weightRepo = new WeightLogRepository()
 
-  const [activePlan, weekLogs] = await Promise.all([
+  const [activePlan, weekLogs, latestWeight] = await Promise.all([
     dietRepo.findActiveByUserId(user.id),
     mealLogRepo.findByUserAndDateRange(user.id, weekStart, endOfDay(today)),
+    weightRepo.findLatest(user.id),
   ])
 
   if (!activePlan) {
@@ -37,7 +40,7 @@ export default async function DashboardPage() {
   const dailyTarget = user.dailyKcalTarget ?? activePlan.totalKcal
 
   const weekConsumed = weekLogs
-    .filter((log) => log.status === "eaten")
+    .filter((log) => log.status === "eaten" || log.status === "out_of_window")
     .reduce((sum, log) => sum + (log.parsedKcal ?? 0), 0)
   const weekTarget = dailyTarget * 7
   const weekBalance = weekTarget - weekConsumed
@@ -53,6 +56,7 @@ export default async function DashboardPage() {
       userName={user.name.split(" ")[0]}
       weekBalance={weekBalance}
       adherenceScore={adherence.adherenceScore}
+      currentWeight={latestWeight?.weight ?? null}
     />
   )
 }

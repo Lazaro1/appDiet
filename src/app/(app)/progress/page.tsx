@@ -3,30 +3,37 @@ import { getAuthenticatedUser } from "@/lib/auth/get-authenticated-user"
 import { DietPlanRepository } from "@/lib/db/repositories/diet-plan-repository"
 import { MealLogRepository } from "@/lib/db/repositories/meal-log-repository"
 import { WeightLogRepository } from "@/lib/db/repositories/weight-log-repository"
+import { ProgressView } from "@/components/progress/progress-view"
+import {
+  averageWeight,
+  buildDailySummaries,
+  calculateGoalStreak,
+} from "@/lib/nutrition/progress-stats"
 import { buildWeeklySummary, getWeekStart } from "@/lib/nutrition/weekly-summary"
-import { ProgressRing } from "@/components/ui/progress-ring"
-import { WeeklyCalorieChart } from "@/components/progress/weekly-calorie-chart"
-import { WeightChart } from "@/components/progress/weight-chart"
-import { PageContainer, PageHeader } from "@/components/ui/page-container"
-import { formatKcal } from "@/lib/nutrition/format"
 
 export default async function ProgressPage() {
   const result = await getAuthenticatedUser()
   if (!result) redirect("/sign-in")
   if (result.redirectTo) redirect(result.redirectTo)
 
-  const startDate = getWeekStart(new Date())
-  const endDate = new Date(startDate)
-  endDate.setDate(endDate.getDate() + 6)
-  endDate.setHours(23, 59, 59, 999)
+  const today = new Date()
+  const weekStart = getWeekStart(today)
+  const weekEnd = new Date(weekStart)
+  weekEnd.setDate(weekEnd.getDate() + 6)
+  weekEnd.setHours(23, 59, 59, 999)
+
+  const streakStart = new Date(today)
+  streakStart.setDate(streakStart.getDate() - 29)
+  streakStart.setHours(0, 0, 0, 0)
 
   const dietRepo = new DietPlanRepository()
   const mealLogRepo = new MealLogRepository()
   const weightRepo = new WeightLogRepository()
 
-  const [activePlan, logs, weightLogs] = await Promise.all([
+  const [activePlan, weekLogs, streakLogs, weightLogs] = await Promise.all([
     dietRepo.findActiveByUserId(result.user.id),
-    mealLogRepo.findByUserAndDateRange(result.user.id, startDate, endDate),
+    mealLogRepo.findByUserAndDateRange(result.user.id, weekStart, weekEnd),
+    mealLogRepo.findByUserAndDateRange(result.user.id, streakStart, weekEnd),
     weightRepo.findByUserId(result.user.id, 30),
   ])
 
@@ -36,57 +43,36 @@ export default async function ProgressPage() {
   const summary = buildWeeklySummary({
     dailyTarget,
     mealsPerDay,
-    logs,
-    startDate,
+    logs: weekLogs,
+    startDate: weekStart,
   })
 
-  const weekLabel =
-    summary.balance > 0
-      ? "Semana em déficit"
-      : summary.balance < 0
-        ? "Semana em superávit"
-        : "Semana equilibrada"
+  const streakDays = buildDailySummaries({
+    dailyTarget,
+    mealsPerDay,
+    logs: streakLogs,
+    startDate: streakStart,
+    dayCount: 30,
+  })
+
+  const streak = calculateGoalStreak(streakDays)
+  const avgWeight = averageWeight(weightLogs)
+  const avgDailyKcal = Math.round(summary.totalConsumed / 7)
+
+  const weightChartLogs = [...weightLogs]
+    .reverse()
+    .map((l) => ({
+      date: l.date.toISOString(),
+      weight: l.weight,
+    }))
 
   return (
-    <PageContainer>
-      <PageHeader title="Progresso" subtitle="Últimos 7 dias" />
-
-      <div className="rounded-lg bg-signature-teal p-6 text-on-primary">
-        <p className="text-lg font-semibold">{weekLabel}</p>
-        <p className="mt-1 font-tabular-nums text-[28px] font-bold">
-          {summary.balance > 0 ? "-" : summary.balance < 0 ? "+" : ""}
-          {formatKcal(Math.abs(summary.balance))} kcal
-        </p>
-      </div>
-
-      <div className="flex items-center justify-center">
-        <ProgressRing
-          percentage={summary.adherence.adherenceScore}
-          label="Adesão"
-          size={140}
-        />
-      </div>
-
-      <div className="grid gap-4 lg:grid-cols-2">
-        <div className="rounded-lg border border-border bg-card p-4 shadow-sm">
-          <h2 className="mb-4 text-xs font-semibold uppercase tracking-wider text-muted-foreground">
-            Calorias por dia
-          </h2>
-          <WeeklyCalorieChart days={summary.days} />
-        </div>
-
-        <div className="rounded-lg border border-border bg-card p-4 shadow-sm">
-          <h2 className="mb-4 text-xs font-semibold uppercase tracking-wider text-muted-foreground">
-            Peso
-          </h2>
-          <WeightChart
-            logs={weightLogs.reverse().map((l) => ({
-              date: l.date.toISOString(),
-              weight: l.weight,
-            }))}
-          />
-        </div>
-      </div>
-    </PageContainer>
+    <ProgressView
+      summary={summary}
+      weightLogs={weightChartLogs}
+      streak={streak}
+      avgWeight={avgWeight}
+      avgDailyKcal={avgDailyKcal}
+    />
   )
 }

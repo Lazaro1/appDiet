@@ -1,3 +1,5 @@
+import { isLoggedLogStatus } from "./meal-status"
+
 export interface DailySummary {
   date: string
   consumed: number
@@ -53,7 +55,7 @@ export function buildWeeklySummary(params: {
     )
 
     const consumed = dayLogs
-      .filter((l) => l.status === "eaten")
+      .filter((l) => isLoggedLogStatus(l.status))
       .reduce((s, l) => s + (l.parsedKcal ?? 0), 0)
 
     days.push({

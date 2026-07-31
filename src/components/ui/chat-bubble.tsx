@@ -1,34 +1,83 @@
+import { Bot } from "lucide-react"
 import { cn } from "@/lib/utils"
 
 interface ChatBubbleProps {
-  /** Who sent the message */
   role: "user" | "assistant"
-  /** Message content */
   children: React.ReactNode
-  /** Optional timestamp displayed below the bubble */
   timestamp?: string
+  showAvatar?: boolean
 }
 
-export function ChatBubble({ role, children, timestamp }: ChatBubbleProps) {
+export function ChatBubble({
+  role,
+  children,
+  timestamp,
+  showAvatar = false,
+}: ChatBubbleProps) {
   const isUser = role === "user"
 
-  return (
-    <div className={cn("flex flex-col", isUser ? "items-end" : "items-start")}>
-      <div
-        className={cn(
-          "max-w-[80%] px-3 py-2 text-sm leading-relaxed",
-          isUser
-            ? "rounded-lg rounded-br-[6px] bg-primary text-on-primary"
-            : "rounded-lg rounded-bl-[6px] bg-surface text-ink",
+  if (isUser) {
+    return (
+      <div className="flex max-w-[80%] flex-col self-end">
+        <div
+          className={cn(
+            "rounded-2xl rounded-br-none bg-signature-teal p-3 text-sm leading-relaxed text-white shadow-sm",
+          )}
+        >
+          {children}
+        </div>
+        {timestamp && (
+          <span className="mr-1 mt-1 self-end text-[11px] text-muted-foreground">
+            {timestamp}
+          </span>
         )}
-      >
-        {children}
       </div>
-      {timestamp && (
-        <span className="mt-0.5 text-xs text-muted-foreground">
-          {timestamp}
-        </span>
+    )
+  }
+
+  const bubble = (
+    <div
+      className={cn(
+        "max-w-[80%] rounded-2xl rounded-bl-none border border-border/30 bg-surface p-3 text-sm leading-relaxed text-body shadow-sm",
       )}
+    >
+      {children}
+    </div>
+  )
+
+  if (!showAvatar) {
+    return <div className="flex w-full self-start">{bubble}</div>
+  }
+
+  return (
+    <div className="flex max-w-[80%] items-end gap-2 self-start">
+      <div className="flex size-8 shrink-0 items-center justify-center rounded-full bg-surface-raised lg:hidden">
+        <Bot className="size-4 text-primary" />
+      </div>
+      {bubble}
+    </div>
+  )
+}
+
+export function TypingIndicator({ showAvatar = false }: { showAvatar?: boolean }) {
+  const dots = (
+    <div className="flex h-[42px] items-center gap-1 rounded-2xl rounded-bl-none border border-border/30 bg-surface px-4 shadow-sm">
+      <span className="size-2 animate-bounce rounded-full bg-signature-teal [animation-delay:-0.32s]" />
+      <span className="size-2 animate-bounce rounded-full bg-signature-teal [animation-delay:-0.16s]" />
+      <span className="size-2 animate-bounce rounded-full bg-signature-teal" />
+    </div>
+  )
+
+  if (!showAvatar) {
+    return <div className="flex w-full self-start">{dots}</div>
+  }
+
+  return (
+    <div className="flex max-w-[80%] items-end gap-2 self-start">
+      <div className="flex size-8 shrink-0 items-center justify-center rounded-full bg-surface-raised lg:hidden">
+        <Bot className="size-4 text-primary" />
+      </div>
+      {dots}
     </div>
   )
 }

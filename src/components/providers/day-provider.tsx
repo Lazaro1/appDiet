@@ -8,6 +8,7 @@ import {
   useState,
 } from "react"
 import type { DayMealSnapshot, DaySnapshot } from "@/lib/nutrition/day"
+import type { MealStatus } from "@/lib/nutrition/meal-status"
 
 interface DayContextValue {
   meals: DayMealSnapshot[]
@@ -16,8 +17,13 @@ interface DayContextValue {
   hasActivePlan: boolean
   /** Href of the next meal to register, or null when the day is complete */
   nextPendingHref: string | null
-  /** Optimistically mark a meal as eaten (before the server revalidates) */
-  markMealEaten: (mealId: string, kcal: number, conformant: boolean) => void
+  /** Optimistically mark a meal as logged (before the server revalidates) */
+  markMealEaten: (
+    mealId: string,
+    kcal: number,
+    conformant: boolean,
+    status?: MealStatus,
+  ) => void
   /** Optimistically mark a meal as skipped */
   markMealSkipped: (mealId: string) => void
 }
@@ -52,11 +58,16 @@ export function DayProvider({
   }
 
   const markMealEaten = useCallback(
-    (mealId: string, kcal: number, conformant: boolean) => {
+    (
+      mealId: string,
+      kcal: number,
+      conformant: boolean,
+      status: MealStatus = "eaten",
+    ) => {
       setMeals((prev) =>
         prev.map((m) =>
           m.id === mealId
-            ? { ...m, status: "eaten", kcalConsumed: kcal, conformant }
+            ? { ...m, status, kcalConsumed: kcal, conformant }
             : m,
         ),
       )

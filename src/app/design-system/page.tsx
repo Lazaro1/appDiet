@@ -22,7 +22,7 @@ import {
   Home,
   Utensils,
   MessageCircle,
-  BarChart3,
+  TrendingUp,
   User,
   Flame,
   TrendingDown,
@@ -91,7 +91,7 @@ const navItems = [
   { icon: <Home />, label: "Início", href: "/" },
   { icon: <Utensils />, label: "Refeições", href: "/meals" },
   { icon: <MessageCircle />, label: "Chat", href: "/chat" },
-  { icon: <BarChart3 />, label: "Progresso", href: "/progress" },
+  { icon: <TrendingUp />, label: "Progresso", href: "/progress" },
   { icon: <User />, label: "Perfil", href: "/profile" },
 ]
 
@@ -852,19 +852,26 @@ export default function DesignSystemPage() {
           <p className="text-sm text-muted-foreground">
             Preview da navegação inferior (no app real é fixed bottom).
           </p>
-          <div className="relative">
-            <nav className="flex h-16 items-center justify-around rounded-lg border border-border bg-canvas shadow-sm">
-              {navItems.map((item) => (
-                <div
-                  key={item.href}
-                  className={`flex flex-col items-center gap-0.5 ${
-                    item.href === "/" ? "text-primary" : "text-muted-foreground"
-                  }`}
-                >
-                  <span className="[&_svg]:size-5">{item.icon}</span>
-                  <span className="text-[11px] font-medium">{item.label}</span>
-                </div>
-              ))}
+          <div className="relative overflow-hidden rounded-t-xl bg-surface px-2 py-2 shadow-xl">
+            <nav className="flex items-center justify-around">
+              {navItems.map((item) => {
+                const isActive = item.href === "/"
+                return (
+                  <div
+                    key={item.href}
+                    className={`flex min-w-[3.5rem] flex-col items-center px-3 py-1.5 ${
+                      isActive
+                        ? "rounded-md bg-primary font-semibold text-on-primary"
+                        : "rounded-xl text-muted-foreground"
+                    }`}
+                  >
+                    <span className="[&_svg]:size-6">{item.icon}</span>
+                    <span className="mt-1 text-[11px] font-semibold tracking-wide">
+                      {item.label}
+                    </span>
+                  </div>
+                )
+              })}
             </nav>
           </div>
         </Section>
@@ -977,7 +984,7 @@ export default function DesignSystemPage() {
       </main>
 
       {/* Bottom Nav (fixed) */}
-      <BottomNav items={navItems} />
+      <BottomNav />
 
       {/* FAB (static preview — the real Fab derives its target from DayProvider) */}
       <button

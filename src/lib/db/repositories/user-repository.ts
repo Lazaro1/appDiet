@@ -1,5 +1,5 @@
 import { prisma } from "../prisma"
-import type { User, Prisma } from "@/generated/prisma"
+import { Prisma, type User } from "@/generated/prisma"
 import type { Sex, ActivityLevel, Goal } from "@/generated/prisma"
 
 export class UserRepository {
@@ -17,6 +17,32 @@ export class UserRepository {
     email: string
   }): Promise<User> {
     return prisma.user.create({ data })
+  }
+
+  /**
+   * Find or create by clerkId. Safe under concurrent callers (layout + page SSR):
+   * if create hits P2002, re-fetch the row the other request just inserted.
+   */
+  async findOrCreateByClerkId(data: {
+    clerkId: string
+    name: string
+    email: string
+  }): Promise<User> {
+    const existing = await this.findByClerkId(data.clerkId)
+    if (existing) return existing
+
+    try {
+      return await this.create(data)
+    } catch (error) {
+      if (
+        error instanceof Prisma.PrismaClientKnownRequestError &&
+        error.code === "P2002"
+      ) {
+        const again = await this.findByClerkId(data.clerkId)
+        if (again) return again
+      }
+      throw error
+    }
   }
 
   async updateProfile(id: string, data: {

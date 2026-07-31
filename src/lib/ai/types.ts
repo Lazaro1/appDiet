@@ -64,6 +64,7 @@ export interface AIProvider {
   importDietPlan(
     text: string,
     mealWindows: Array<{ name: string; startHour: number; endHour: number }>,
+    options?: { dailyKcalTarget?: number; mealCountHint?: number },
   ): Promise<{
     meals: Array<{
       name: string
