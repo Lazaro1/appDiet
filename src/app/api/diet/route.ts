@@ -2,6 +2,11 @@ import { requireApiUser, apiSuccess, apiError } from "@/lib/auth/require-api-use
 import { DietPlanRepository } from "@/lib/db/repositories/diet-plan-repository"
 import { generateDietPlanForUser, importDietPlanForUser } from "@/lib/diet/create-plan"
 import { toUserFacingAiError } from "@/lib/ai/errors"
+import {
+  DietPlanGenerationError,
+  DietPlanUnfeasibleError,
+  EmptyFoodCatalogError,
+} from "@/lib/nutrition/orchestration/errors"
 
 export async function GET() {
   const { user, error } = await requireApiUser()
@@ -37,6 +42,25 @@ export async function POST(request: Request) {
     if (process.env.NODE_ENV === "development") {
       console.error("[POST /api/diet]", err)
     }
+
+    if (err instanceof DietPlanUnfeasibleError) {
+      return apiError(
+        `Não conseguimos montar um plano com suas restrições: ${err.reason}. Revise as restrições no seu perfil e tente de novo.`,
+        422,
+      )
+    }
+
+    if (err instanceof EmptyFoodCatalogError) {
+      return apiError(
+        "Nenhum alimento do catálogo atende às suas restrições. Revise as restrições no seu perfil.",
+        422,
+      )
+    }
+
+    if (err instanceof DietPlanGenerationError) {
+      return apiError(err.message, 422)
+    }
+
     return apiError(toUserFacingAiError(err), 500)
   }
 }

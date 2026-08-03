@@ -41,7 +41,8 @@
 | # | Task | Status | Detalhes |
 |---|------|--------|---------|
 | 3.1 | WhatsApp (Evolution API) — lembretes e registro | ⬜ Pendente | Webhook + handlers + templates |
-| 3.2 | TBCA import script | ⬜ Pendente | Seed script para importar tabela de alimentos |
+| 3.2 | TBCA import script | 🔄 Em andamento | Schema estendido + `scripts/tbca-import.ts` + busca lexical; importar arquivo completo via `TBCA_FILE_PATH` |
+| 3.5 | Pipeline nutricional determinístico (Semanas 1–2) | 🔄 Em andamento | LLM só escolhe `foodId + gramas`; backend calcula, valida (±5% dia / ±10% refeição) e otimiza porções. Falta validação E2E com banco — ver `docs/MVP-SCOPE.md` §15 |
 | 3.3 | Criptografia de campos sensíveis | ⬜ Pendente | Prisma Client Extension com AES-256 |
 | 3.4 | Docker Compose + Caddy | ⬜ Pendente | Deploy config para VPS |
 

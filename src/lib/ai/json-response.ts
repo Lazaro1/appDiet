@@ -17,7 +17,13 @@ function sumMealItemKcal(items: unknown[]): number {
   }, 0)
 }
 
-function normalizeDietPlanPayload(value: unknown): unknown {
+/**
+ * Import-only normalization: the pasted diet is the source of truth, so a
+ * missing kcalTarget is backfilled from the items the model extracted.
+ * Plan generation never goes through here — it uses the closed-catalog draft
+ * schema, where targets are computed by the backend before the LLM runs.
+ */
+function normalizeDietImportPayload(value: unknown): unknown {
   const normalized = normalizeLlmKeys(value)
   if (!normalized || typeof normalized !== "object" || Array.isArray(normalized)) {
     return normalized
@@ -44,8 +50,8 @@ function normalizeDietPlanPayload(value: unknown): unknown {
   }
 }
 
-const dietPlanSchema = z.preprocess(
-  normalizeDietPlanPayload,
+const dietImportPlanSchema = z.preprocess(
+  normalizeDietImportPayload,
   z.object({
     meals: z
       .array(
@@ -337,7 +343,13 @@ export async function requestStructuredJson<T>(params: {
     try {
       const response = await params.request(attempt)
       responseContent = response.content
-      return parseJsonFromLlm(response.content, params.schema, params.label)
+      const parsed = parseJsonFromLlm(response.content, params.schema, params.label)
+      if (process.env.NODE_ENV === "development" && attempt > 1) {
+        console.info(
+          `[AppDiet] AI ${params.label} succeeded on attempt ${attempt}/${maxAttempts}`,
+        )
+      }
+      return parsed
     } catch (err) {
       lastError = err instanceof Error ? err : new Error(String(err))
       if (process.env.NODE_ENV === "development") {
@@ -356,7 +368,7 @@ export async function requestStructuredJson<T>(params: {
 export const aiSchemas = {
   parsedFoodItems: parsedFoodItemsSchema,
   parsedFoodItemsResponse: parsedFoodItemsResponseSchema,
-  dietPlan: dietPlanSchema,
+  dietImportPlan: dietImportPlanSchema,
   swapSuggestions: swapSuggestionsSchema,
   swapSuggestionsResponse: swapSuggestionsResponseSchema,
 }

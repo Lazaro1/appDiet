@@ -1,6 +1,7 @@
 import type { MealPreset } from "@/lib/onboarding/types"
 import type { ParsedFoodItem } from "@/lib/ai/types"
 import type { PortionUnit } from "@/generated/prisma"
+import type { HydratedDietPlan } from "@/lib/nutrition/orchestration/hydrate-diet-draft"
 
 export interface UserMealPreferences {
   mealsPerDay: number
@@ -28,6 +29,41 @@ export function mapFoodItemToMealItem(item: ParsedFoodItem) {
     protein: item.estimatedProtein,
     carbs: item.estimatedCarbs,
     fat: item.estimatedFat,
+  }
+}
+
+/**
+ * Maps a plan whose nutrients were calculated by the backend, keeping the
+ * TBCA `foodId` on every item so swaps and logs can trace back to the source.
+ */
+export function mapHydratedPlanToCreateInput(params: {
+  userId: string
+  planName: string
+  plan: HydratedDietPlan
+}) {
+  const meals = params.plan.meals.map((meal) => ({
+    name: meal.name,
+    kcalTarget: meal.kcalTarget,
+    windowStart: meal.startHour,
+    windowEnd: meal.endHour,
+    order: meal.order,
+    mealItems: meal.items.map((item) => ({
+      foodId: item.foodId,
+      name: item.name,
+      quantity: item.quantityGrams,
+      unit: "g" as PortionUnit,
+      kcal: item.nutrition.calories,
+      protein: item.nutrition.proteinGrams,
+      carbs: item.nutrition.carbsGrams,
+      fat: item.nutrition.fatGrams,
+    })),
+  }))
+
+  return {
+    userId: params.userId,
+    name: params.planName,
+    totalKcal: meals.reduce((sum, meal) => sum + meal.kcalTarget, 0),
+    meals,
   }
 }
 

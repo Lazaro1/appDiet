@@ -1,10 +1,18 @@
 import { aiSchemas, requestStructuredJson } from "./json-response"
-import {
-  buildDietImportSystemPrompt,
-  buildDietPlanSystemPrompt,
-  buildDietPlanUserPrompt,
-} from "./prompts"
-import type { AIProvider, ChatMessageInput, ChatResponse, ParsedFoodItem } from "./types"
+import { buildDietImportSystemPrompt } from "./prompts"
+import { buildDietPlanRepairPrompt } from "./prompts/diet-plan-repair"
+import { buildDietPlanSystemPrompt } from "./prompts/diet-plan-system"
+import { buildDietPlanUserPrompt } from "./prompts/diet-plan-user"
+import { buildGeneratedDietDraftSchema } from "./schemas/diet-plan-draft.schema"
+import type {
+  AIProvider,
+  ChatMessageInput,
+  ChatResponse,
+  DietGenerationContext,
+  DietRepairIssue,
+  GeneratedDietDraft,
+  ParsedFoodItem,
+} from "./types"
 
 const JSON_RETRY_HINT =
   "Responda APENAS com JSON válido, sem markdown, comentários ou texto fora do JSON."
@@ -129,7 +137,7 @@ ${JSON_RETRY_HINT}
   }> {
     return requestStructuredJson({
       label: "diet import",
-      schema: aiSchemas.dietPlan,
+      schema: aiSchemas.dietImportPlan,
       request: (attempt) =>
         this.chat({
           systemPrompt: buildDietImportSystemPrompt({
@@ -192,40 +200,53 @@ Retorne exatamente 3 itens em "suggestions".`,
     }).then((result) => result.suggestions)
   }
 
-  async generateDietPlan(params: {
-    dailyKcalTarget: number
-    mealsPerDay: number
-    mealWindows: Array<{ name: string; startHour: number; endHour: number }>
-    restrictions?: string[]
-    preferences?: string[]
-  }): Promise<{
-    meals: Array<{
-      name: string
-      kcalTarget: number
-      items: ParsedFoodItem[]
-    }>
-  }> {
-    const userPrompt = buildDietPlanUserPrompt(params)
+  async generateDietDraft(params: {
+    context: DietGenerationContext
+    attempt?: number
+    previousDraft?: GeneratedDietDraft
+    issues?: DietRepairIssue[]
+  }): Promise<GeneratedDietDraft> {
+    const allowedFoodIds = new Set(
+      params.context.meals.flatMap((meal) =>
+        meal.candidates.map((food) => food.foodId),
+      ),
+    )
+
+    const isRepair = Boolean(params.previousDraft && params.issues?.length)
+    const userPrompt = isRepair
+      ? buildDietPlanRepairPrompt({
+          context: params.context,
+          previousDraft: params.previousDraft!,
+          issues: params.issues!,
+        })
+      : buildDietPlanUserPrompt(params.context)
+
+    // Later orchestration attempts fall back to the stronger model.
+    const useFallbackModel = (params.attempt ?? 1) >= 3
+    const largePlan = params.context.meals.length >= 5
 
     return requestStructuredJson({
-      label: "diet plan",
-      schema: aiSchemas.dietPlan,
-      request: (attempt) =>
+      label: "diet plan draft",
+      schema: buildGeneratedDietDraftSchema(allowedFoodIds),
+      request: (jsonAttempt) =>
         this.chat({
           systemPrompt: buildDietPlanSystemPrompt(),
           messages: [
             {
               role: "user",
               content:
-                attempt > 1
-                  ? `${userPrompt}\n\nA resposta anterior não era JSON válido ou veio incompleta. ${JSON_RETRY_HINT}`
+                jsonAttempt > 1
+                  ? `${userPrompt}\n\nA resposta anterior não era JSON válido ou usava ids fora do catálogo. ${JSON_RETRY_HINT}`
                   : userPrompt,
             },
           ],
-          temperature: 0.3,
+          temperature: isRepair ? 0.1 : 0.2,
           maxTokens: 4096,
           jsonMode: true,
-          model: attempt > 1 ? this.config.fallbackModel : undefined,
+          model:
+            useFallbackModel || jsonAttempt > 1 || largePlan
+              ? this.config.fallbackModel
+              : undefined,
         }),
     })
   }

@@ -8,6 +8,68 @@ export interface ParsedFoodItem {
   estimatedFat: number
 }
 
+/** Single food choice made by the LLM — nutrients are calculated by the backend */
+export interface PlannedFoodItem {
+  foodId: string
+  quantityGrams: number
+}
+
+/** Raw plan composition returned by the LLM, before hydration */
+export interface GeneratedDietDraft {
+  status: "ok" | "unfeasible"
+  meals?: Array<{
+    mealId: string
+    items: PlannedFoodItem[]
+  }>
+  reason?: string
+}
+
+/** Food offered to the LLM in the closed catalog for a meal */
+export interface DietCatalogFood {
+  foodId: string
+  /** Short label for prompts and UI */
+  displayName: string
+  nutritionalRole?: string | null
+  kcalPer100g: number
+  proteinPer100g: number
+  portionDefaultGrams: number
+  portionMinGrams: number
+  portionMaxGrams: number
+  portionStepGrams: number
+}
+
+export interface DietCatalogMeal {
+  mealId: string
+  mealName: string
+  kcalTarget: number
+  startHour: number
+  endHour: number
+  candidates: DietCatalogFood[]
+}
+
+/** Everything the LLM needs to compose a plan from a closed catalog */
+export interface DietGenerationContext {
+  dailyKcalTarget: number
+  macroTargets?: {
+    proteinGrams: number
+    carbsGrams: number
+    fatGrams: number
+  }
+  restrictions: string[]
+  preferences: string[]
+  meals: DietCatalogMeal[]
+}
+
+/**
+ * Minimal issue shape used to build repair prompts.
+ * Structurally compatible with the validator's richer issue type.
+ */
+export interface DietRepairIssue {
+  code: string
+  message: string
+  path?: string
+}
+
 /** A single chat message */
 export interface ChatMessageInput {
   role: "user" | "assistant" | "system"
@@ -45,20 +107,16 @@ export interface AIProvider {
   /** Parse a meal description into structured food items */
   parseMeal(text: string, context?: { mealName?: string; kcalTarget?: number }): Promise<ParsedFoodItem[]>
 
-  /** Generate a diet plan based on user profile */
-  generateDietPlan(params: {
-    dailyKcalTarget: number
-    mealsPerDay: number
-    mealWindows: Array<{ name: string; startHour: number; endHour: number }>
-    restrictions?: string[]
-    preferences?: string[]
-  }): Promise<{
-    meals: Array<{
-      name: string
-      kcalTarget: number
-      items: ParsedFoodItem[]
-    }>
-  }>
+  /**
+   * Compose a diet plan draft by picking foods from a closed catalog.
+   * Returns only foodId + grams; the backend calculates all nutrients.
+   */
+  generateDietDraft(params: {
+    context: DietGenerationContext
+    attempt?: number
+    previousDraft?: GeneratedDietDraft
+    issues?: DietRepairIssue[]
+  }): Promise<GeneratedDietDraft>
 
   /** Parse imported diet text into structured plan */
   importDietPlan(

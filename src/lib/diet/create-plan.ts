@@ -1,9 +1,14 @@
 import { getAIProvider } from "@/lib/ai/factory"
 import { DietPlanRepository } from "@/lib/db/repositories/diet-plan-repository"
+import { generateDietPlan } from "@/lib/nutrition/orchestration/generate-diet-plan"
 import { MEAL_PRESETS } from "@/lib/onboarding/types"
 import type { User } from "@/generated/prisma"
 import { detectMealCountInText, resolveMealPresetsForImport } from "./import-helpers"
-import { mapAiPlanToCreateInput, parseUserPreferences } from "./map-ai-plan"
+import {
+  mapAiPlanToCreateInput,
+  mapHydratedPlanToCreateInput,
+  parseUserPreferences,
+} from "./map-ai-plan"
 
 function getMealPresets(user: User) {
   const prefs = parseUserPreferences(user.preferences)
@@ -21,24 +26,23 @@ export async function generateDietPlanForUser(user: User) {
   const mealPresets = getMealPresets(user)
   const prefs = parseUserPreferences(user.preferences)
 
-  const ai = getAIProvider()
-  const aiPlan = await ai.generateDietPlan({
+  const { plan } = await generateDietPlan({
     dailyKcalTarget: user.dailyKcalTarget ?? 2000,
-    mealsPerDay: mealPresets.length,
-    mealWindows: mealPresets.map((m) => ({
-      name: m.name,
-      startHour: m.windowStart,
-      endHour: m.windowEnd,
+    mealWindows: mealPresets.map((preset, index) => ({
+      id: `meal-${index}`,
+      name: preset.name,
+      startHour: preset.windowStart,
+      endHour: preset.windowEnd,
     })),
     restrictions: parseRestrictions(user.restrictions),
     preferences: prefs?.foodPreferences ? [prefs.foodPreferences] : [],
+    goal: user.goal,
   })
 
-  const input = mapAiPlanToCreateInput({
+  const input = mapHydratedPlanToCreateInput({
     userId: user.id,
     planName: "Plano alimentar",
-    mealPresets,
-    aiMeals: aiPlan.meals,
+    plan,
   })
 
   const repo = new DietPlanRepository()

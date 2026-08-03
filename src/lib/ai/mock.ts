@@ -1,4 +1,14 @@
-import type { AIProvider, ChatMessageInput, ChatResponse, ParsedFoodItem } from "./types"
+import type {
+  AIProvider,
+  ChatMessageInput,
+  ChatResponse,
+  DietCatalogFood,
+  DietCatalogMeal,
+  DietGenerationContext,
+  GeneratedDietDraft,
+  ParsedFoodItem,
+  PlannedFoodItem,
+} from "./types"
 
 const MOCK_MODEL = "mock/appdiet-dev"
 
@@ -66,6 +76,67 @@ function mockParsedItems(text: string, kcalTarget?: number): ParsedFoodItem[] {
   return items
 }
 
+/** Kcal split used by the mock when composing a meal from the catalog. */
+const MOCK_ITEM_WEIGHTS = [0.45, 0.35, 0.2]
+const MOCK_PREFERRED_ROLES = ["protein", "carbohydrate", "vegetable", "fruit", "dairy"]
+
+function gramsForKcal(food: DietCatalogFood, kcal: number): number {
+  if (food.kcalPer100g <= 0) return food.portionDefaultGrams
+
+  const raw = (kcal / food.kcalPer100g) * 100
+  const step = food.portionStepGrams > 0 ? food.portionStepGrams : 5
+  const stepped = Math.round(raw / step) * step
+
+  return Math.min(food.portionMaxGrams, Math.max(food.portionMinGrams, stepped))
+}
+
+function pickMockCandidates(
+  meal: DietCatalogMeal,
+  usesByFoodId: Map<string, number>,
+): DietCatalogFood[] {
+  const available = meal.candidates.filter(
+    (food) => (usesByFoodId.get(food.foodId) ?? 0) < 2,
+  )
+  const picked: DietCatalogFood[] = []
+
+  for (const role of MOCK_PREFERRED_ROLES) {
+    if (picked.length >= MOCK_ITEM_WEIGHTS.length) break
+    const match = available.find(
+      (food) => food.nutritionalRole === role && !picked.includes(food),
+    )
+    if (match) picked.push(match)
+  }
+
+  for (const food of available) {
+    if (picked.length >= MOCK_ITEM_WEIGHTS.length) break
+    if (!picked.includes(food)) picked.push(food)
+  }
+
+  return picked
+}
+
+function mockDraftItems(
+  meal: DietCatalogMeal,
+  usesByFoodId: Map<string, number>,
+): PlannedFoodItem[] {
+  const candidates = pickMockCandidates(meal, usesByFoodId)
+  if (candidates.length === 0) return []
+
+  const weights = MOCK_ITEM_WEIGHTS.slice(0, candidates.length)
+  const weightSum = weights.reduce((sum, weight) => sum + weight, 0)
+
+  return candidates.map((food, index) => {
+    usesByFoodId.set(food.foodId, (usesByFoodId.get(food.foodId) ?? 0) + 1)
+    return {
+      foodId: food.foodId,
+      quantityGrams: gramsForKcal(
+        food,
+        (meal.kcalTarget * weights[index]) / weightSum,
+      ),
+    }
+  })
+}
+
 function mockMealItems(kcalTarget: number): ParsedFoodItem[] {
   return [
     {
@@ -125,20 +196,25 @@ export class MockAIProvider implements AIProvider {
     return mockParsedItems(text, context?.kcalTarget)
   }
 
-  async generateDietPlan(params: {
-    dailyKcalTarget: number
-    mealWindows: Array<{ name: string; startHour: number; endHour: number }>
-  }) {
+  async generateDietDraft(params: {
+    context: DietGenerationContext
+  }): Promise<GeneratedDietDraft> {
     await delay(800)
-    const perMeal = Math.round(params.dailyKcalTarget / params.mealWindows.length)
 
-    return {
-      meals: params.mealWindows.map((window) => ({
-        name: window.name,
-        kcalTarget: perMeal,
-        items: mockMealItems(perMeal),
-      })),
+    const usesByFoodId = new Map<string, number>()
+    const meals = params.context.meals.map((meal) => ({
+      mealId: meal.mealId,
+      items: mockDraftItems(meal, usesByFoodId),
+    }))
+
+    if (meals.some((meal) => meal.items.length === 0)) {
+      return {
+        status: "unfeasible",
+        reason: "Catálogo insuficiente para montar todas as refeições.",
+      }
     }
+
+    return { status: "ok", meals }
   }
 
   async importDietPlan(

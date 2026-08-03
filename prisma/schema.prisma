@@ -246,18 +246,34 @@ model ChatMessage {
 // TBACFood — Brazilian food composition table
 // ──────────────────────────────────────────────
 model TBACFood {
-  id              String      @id @default(cuid())
-  name            String
-  category        String?
-  kcalPer100g     Float
-  proteinPer100g  Float
-  carbsPer100g    Float
-  fatPer100g      Float
-  fiberPer100g    Float?
-  portionDefault  Float?      // default portion in grams
-  portionUnit     PortionUnit?
+  id                String      @id @default(cuid())
+  externalCode      String?     @unique
+  name              String
+  normalizedName    String?
+  category          String?
+  nutritionalRole   String?
+  preparationMethod String?
+  kcalPer100g       Float
+  proteinPer100g    Float
+  carbsPer100g      Float
+  fatPer100g        Float
+  fiberPer100g      Float?
+  portionDefault    Float?
+  portionMinGrams   Float?
+  portionMaxGrams   Float?
+  portionStepGrams  Float?      @default(5)
+  portionUnit       PortionUnit?
+  synonyms          String[]    @default([])
+  containsGluten    Boolean?
+  containsLactose   Boolean?
+  containsAnimal    Boolean?
+  active            Boolean     @default(true)
 
   mealItems MealItem[]
 
   @@index([name])
+  @@index([normalizedName])
+  @@index([category])
+  @@index([nutritionalRole])
+  @@index([active])
 }
