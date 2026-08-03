@@ -1,7 +1,15 @@
 /** Parsed food item from a meal description */
+export interface ParsedMealDraftItem {
+  foodName: string
+  estimatedGrams: number
+}
+
 export interface ParsedFoodItem {
   foodName: string
   estimatedGrams: number
+  foodId?: string | null
+  recipeId?: string | null
+  matchScore?: number
   estimatedKcal: number
   estimatedProtein: number
   estimatedCarbs: number
@@ -104,19 +112,27 @@ export interface AIProvider {
     maxTokens?: number
   }): AsyncGenerator<string, void, unknown>
 
-  /** Parse a meal description into structured food items */
+  /** Extract food names and grams from a meal description (no macros). */
+  extractMealItems(
+    text: string,
+    context?: { mealName?: string; kcalTarget?: number },
+  ): Promise<ParsedMealDraftItem[]>
+
+  /** Parse a meal description into structured food items with TBCA-backed nutrients */
   parseMeal(text: string, context?: { mealName?: string; kcalTarget?: number }): Promise<ParsedFoodItem[]>
 
-  /**
-   * Compose a diet plan draft by picking foods from a closed catalog.
-   * Returns only foodId + grams; the backend calculates all nutrients.
-   */
-  generateDietDraft(params: {
-    context: DietGenerationContext
-    attempt?: number
-    previousDraft?: GeneratedDietDraft
-    issues?: DietRepairIssue[]
-  }): Promise<GeneratedDietDraft>
+  /** Extract imported diet structure with food names and grams only */
+  extractDietImport(
+    text: string,
+    mealWindows: Array<{ name: string; startHour: number; endHour: number }>,
+    options?: { dailyKcalTarget?: number; mealCountHint?: number },
+  ): Promise<{
+    meals: Array<{
+      name: string
+      kcalTarget?: number
+      items: ParsedMealDraftItem[]
+    }>
+  }>
 
   /** Parse imported diet text into structured plan */
   importDietPlan(
@@ -131,7 +147,18 @@ export interface AIProvider {
     }>
   }>
 
-  /** Suggest food swap alternatives */
+  /**
+   * Compose a diet plan draft by picking foods from a closed catalog.
+   * Returns only foodId + grams; the backend calculates all nutrients.
+   */
+  generateDietDraft(params: {
+    context: DietGenerationContext
+    attempt?: number
+    previousDraft?: GeneratedDietDraft
+    issues?: DietRepairIssue[]
+  }): Promise<GeneratedDietDraft>
+
+  /** @deprecated Prefer catalog-based swap via suggestFoodSwaps orchestration */
   suggestSwap(params: {
     itemName: string
     itemKcal: number

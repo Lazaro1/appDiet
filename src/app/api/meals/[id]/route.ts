@@ -1,8 +1,8 @@
 import { requireApiUser, apiSuccess, apiError } from "@/lib/auth/require-api-user"
 import { DietPlanRepository } from "@/lib/db/repositories/diet-plan-repository"
 import { MealLogRepository } from "@/lib/db/repositories/meal-log-repository"
-import { getAIProvider } from "@/lib/ai/factory"
 import { isConformant } from "@/lib/nutrition/adherence"
+import { parseMealText } from "@/lib/nutrition/orchestration/parse-meal-text"
 import {
   getMealLogDateError,
   isTodayDate,
@@ -84,10 +84,10 @@ export async function POST(
   if (!text?.trim()) return apiError("Descreva o que você comeu")
 
   try {
-    const ai = getAIProvider()
-    const items = await ai.parseMeal(text, {
+    const items = await parseMealText(text, {
       mealName: meal.name,
       kcalTarget: meal.kcalTarget,
+      restrictions: user!.restrictions,
     })
 
     const parsedKcal = items.reduce((s, i) => s + i.estimatedKcal, 0)

@@ -41,8 +41,9 @@
 | # | Task | Status | Detalhes |
 |---|------|--------|---------|
 | 3.1 | WhatsApp (Evolution API) — lembretes e registro | ⬜ Pendente | Webhook + handlers + templates |
-| 3.2 | TBCA import script | 🔄 Em andamento | Schema estendido + `scripts/tbca-import.ts` + busca lexical; importar arquivo completo via `TBCA_FILE_PATH` |
-| 3.5 | Pipeline nutricional determinístico (Semanas 1–2) | 🔄 Em andamento | LLM só escolhe `foodId + gramas`; backend calcula, valida (±5% dia / ±10% refeição) e otimiza porções. Falta validação E2E com banco — ver `docs/MVP-SCOPE.md` §15 |
+| 3.2 | TBCA import script | ✅ Concluído | 5.751 alimentos + sinônimos + busca lexical (`smoke:search` 10/10) |
+| 3.5 | Pipeline nutricional determinístico (Semanas 1–2) | ✅ Concluído | Geração com catálogo fechado, validação ±5%/±10%, otimização local (`smoke:plan` 4/4) |
+| 3.6 | Parse, import e swap com TBCA (Semana 3) | ✅ Concluído | `parseMealText`, `importDietPlanFromText`, `suggestFoodSwaps` via catálogo; `smoke:parse` 11/11; 12 receitas seed |
 | 3.3 | Criptografia de campos sensíveis | ⬜ Pendente | Prisma Client Extension com AES-256 |
 | 3.4 | Docker Compose + Caddy | ⬜ Pendente | Deploy config para VPS |
 

@@ -1,6 +1,6 @@
 import { requireApiUser, apiSuccess, apiError } from "@/lib/auth/require-api-user"
 import { DietPlanRepository } from "@/lib/db/repositories/diet-plan-repository"
-import { getAIProvider } from "@/lib/ai/factory"
+import { suggestFoodSwaps } from "@/lib/nutrition/orchestration/suggest-food-swaps"
 
 export async function POST(
   request: Request,
@@ -22,20 +22,19 @@ export async function POST(
   const itemKcal = body.itemKcal as number | undefined
   const itemProtein = body.itemProtein as number | undefined
   const availableFoods = body.availableFoods as string | undefined
-  const mealKcalTarget = body.mealKcalTarget as number | undefined
 
   if (!itemName || !availableFoods?.trim()) {
     return apiError("itemName e availableFoods são obrigatórios")
   }
 
   try {
-    const ai = getAIProvider()
-    const suggestions = await ai.suggestSwap({
+    const suggestions = await suggestFoodSwaps({
       itemName,
       itemKcal: itemKcal ?? 0,
       itemProtein: itemProtein ?? 0,
-      availableFoods,
-      mealKcalTarget: mealKcalTarget ?? 500,
+      availableFoodsText: availableFoods,
+      restrictions: user!.restrictions,
+      limit: 3,
     })
     return apiSuccess({ suggestions })
   } catch (err) {

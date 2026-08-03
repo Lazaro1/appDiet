@@ -1,5 +1,5 @@
-import { getAIProvider } from "@/lib/ai/factory"
 import { DietPlanRepository } from "@/lib/db/repositories/diet-plan-repository"
+import { importDietPlanFromText } from "@/lib/nutrition/orchestration/import-diet-plan"
 import { generateDietPlan } from "@/lib/nutrition/orchestration/generate-diet-plan"
 import { MEAL_PRESETS } from "@/lib/onboarding/types"
 import type { User } from "@/generated/prisma"
@@ -53,19 +53,18 @@ export async function importDietPlanForUser(user: User, text: string) {
   const basePresets = getMealPresets(user)
   const mealPresets = resolveMealPresetsForImport(basePresets, text)
   const detectedMealCount = detectMealCountInText(text)
-  const ai = getAIProvider()
-  const aiPlan = await ai.importDietPlan(
+
+  const aiPlan = await importDietPlanFromText({
     text,
-    mealPresets.map((m) => ({
+    mealWindows: mealPresets.map((m) => ({
       name: m.name,
       startHour: m.windowStart,
       endHour: m.windowEnd,
     })),
-    {
-      dailyKcalTarget: user.dailyKcalTarget ?? undefined,
-      mealCountHint: detectedMealCount > 0 ? detectedMealCount : undefined,
-    },
-  )
+    dailyKcalTarget: user.dailyKcalTarget ?? undefined,
+    mealCountHint: detectedMealCount > 0 ? detectedMealCount : undefined,
+    restrictions: user.restrictions,
+  })
 
   const input = mapAiPlanToCreateInput({
     userId: user.id,

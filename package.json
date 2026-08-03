@@ -14,8 +14,10 @@
     "db:migrate": "prisma migrate dev",
     "tbca:import": "tsx scripts/tbca-import.ts",
     "tbca:synonyms": "tsx scripts/seed-synonyms.ts",
+    "recipes:seed": "tsx scripts/seed-recipes.ts",
     "smoke:search": "tsx scripts/smoke-search.ts",
-    "smoke:plan": "tsx scripts/smoke-generate-plan.ts"
+    "smoke:plan": "tsx scripts/smoke-generate-plan.ts",
+    "smoke:parse": "tsx scripts/smoke-parse-meal.ts"
   },
   "dependencies": {
     "@base-ui/react": "^1.5.0",

@@ -46,8 +46,16 @@ const TERM_MAP: Array<{ pattern: RegExp; apply: (r: ParsedRestrictions) => void 
 ]
 
 export function parseRestrictionsText(
-  restrictions?: string | string[] | null,
+  restrictions?: string | string[] | ParsedRestrictions | null,
 ): ParsedRestrictions {
+  if (
+    restrictions &&
+    typeof restrictions === "object" &&
+    "excludeLactose" in restrictions
+  ) {
+    return restrictions
+  }
+
   const result: ParsedRestrictions = {
     excludeLactose: false,
     excludeGluten: false,

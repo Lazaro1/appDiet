@@ -22,6 +22,7 @@ export function parseUserPreferences(preferences: unknown): UserMealPreferences 
 
 export function mapFoodItemToMealItem(item: ParsedFoodItem) {
   return {
+    ...(item.foodId ? { foodId: item.foodId } : {}),
     name: item.foodName,
     quantity: item.estimatedGrams,
     unit: "g" as PortionUnit,

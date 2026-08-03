@@ -3,7 +3,9 @@ import { buildDietImportSystemPrompt } from "./prompts"
 import { buildDietPlanRepairPrompt } from "./prompts/diet-plan-repair"
 import { buildDietPlanSystemPrompt } from "./prompts/diet-plan-system"
 import { buildDietPlanUserPrompt } from "./prompts/diet-plan-user"
+import { dietImportDraftSchema } from "./schemas/diet-import-draft.schema"
 import { buildGeneratedDietDraftSchema } from "./schemas/diet-plan-draft.schema"
+import { mealParseDraftResponseSchema } from "./schemas/meal-parse-draft.schema"
 import type {
   AIProvider,
   ChatMessageInput,
@@ -12,7 +14,10 @@ import type {
   DietRepairIssue,
   GeneratedDietDraft,
   ParsedFoodItem,
+  ParsedMealDraftItem,
 } from "./types"
+import { resolveParsedMealItems } from "@/lib/nutrition/orchestration/match-food-from-text"
+import { importDietPlanFromText } from "@/lib/nutrition/orchestration/import-diet-plan"
 
 const JSON_RETRY_HINT =
   "Responda APENAS com JSON válido, sem markdown, comentários ou texto fora do JSON."
@@ -98,19 +103,24 @@ export class OpenRouterProvider implements AIProvider {
     }
   }
 
-  async parseMeal(text: string, context?: { mealName?: string; kcalTarget?: number }): Promise<ParsedFoodItem[]> {
-    const contextStr = context ? `\nContexto: refeição "${context.mealName}", meta de ${context.kcalTarget} kcal` : ""
+  async extractMealItems(
+    text: string,
+    context?: { mealName?: string; kcalTarget?: number },
+  ): Promise<ParsedMealDraftItem[]> {
+    const contextStr = context
+      ? `\nContexto: refeição "${context.mealName}", meta de ${context.kcalTarget} kcal`
+      : ""
 
     return requestStructuredJson({
-      label: "meal parse",
-      schema: aiSchemas.parsedFoodItemsResponse,
+      label: "meal parse draft",
+      schema: mealParseDraftResponseSchema,
       maxAttempts: 2,
       request: (attempt) =>
         this.chat({
-          systemPrompt: `Você é um parser de refeições. Parseie a descrição da refeição em alimentos estruturados.
-Para cada alimento, estime a porção em gramas com base no contexto brasileiro.
+          systemPrompt: `Você extrai alimentos de descrições de refeição brasileiras.
+Para cada alimento, retorne foodName e estimatedGrams. Não calcule calorias nem macros.
 ${JSON_RETRY_HINT}
-{"items":[{"foodName":"nome","estimatedGrams":0,"estimatedKcal":0,"estimatedProtein":0,"estimatedCarbs":0,"estimatedFat":0}]}${contextStr}`,
+{"items":[{"foodName":"nome","estimatedGrams":0}]}${contextStr}`,
           messages: [
             {
               role: "user",
@@ -128,16 +138,22 @@ ${JSON_RETRY_HINT}
     }).then((result) => result.items)
   }
 
-  async importDietPlan(
+  async parseMeal(
+    text: string,
+    context?: { mealName?: string; kcalTarget?: number },
+  ): Promise<ParsedFoodItem[]> {
+    const drafts = await this.extractMealItems(text, context)
+    return resolveParsedMealItems(drafts)
+  }
+
+  async extractDietImport(
     text: string,
     mealWindows: Array<{ name: string; startHour: number; endHour: number }>,
     options?: { dailyKcalTarget?: number; mealCountHint?: number },
-  ): Promise<{
-    meals: Array<{ name: string; kcalTarget: number; items: ParsedFoodItem[] }>
-  }> {
+  ) {
     return requestStructuredJson({
-      label: "diet import",
-      schema: aiSchemas.dietImportPlan,
+      label: "diet import draft",
+      schema: dietImportDraftSchema,
       request: (attempt) =>
         this.chat({
           systemPrompt: buildDietImportSystemPrompt({
@@ -159,6 +175,21 @@ ${JSON_RETRY_HINT}
           jsonMode: true,
           model: attempt > 1 ? this.config.fallbackModel : undefined,
         }),
+    })
+  }
+
+  async importDietPlan(
+    text: string,
+    mealWindows: Array<{ name: string; startHour: number; endHour: number }>,
+    options?: { dailyKcalTarget?: number; mealCountHint?: number },
+  ): Promise<{
+    meals: Array<{ name: string; kcalTarget: number; items: ParsedFoodItem[] }>
+  }> {
+    return importDietPlanFromText({
+      text,
+      mealWindows,
+      dailyKcalTarget: options?.dailyKcalTarget,
+      mealCountHint: options?.mealCountHint,
     })
   }
 

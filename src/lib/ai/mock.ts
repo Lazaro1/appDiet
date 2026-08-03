@@ -7,8 +7,11 @@ import type {
   DietGenerationContext,
   GeneratedDietDraft,
   ParsedFoodItem,
+  ParsedMealDraftItem,
   PlannedFoodItem,
 } from "./types"
+import { importDietPlanFromText } from "@/lib/nutrition/orchestration/import-diet-plan"
+import { resolveParsedMealItems } from "@/lib/nutrition/orchestration/match-food-from-text"
 
 const MOCK_MODEL = "mock/appdiet-dev"
 
@@ -191,9 +194,63 @@ export class MockAIProvider implements AIProvider {
     yield* streamText(reply)
   }
 
-  async parseMeal(text: string, context?: { mealName?: string; kcalTarget?: number }): Promise<ParsedFoodItem[]> {
+  async extractMealItems(
+    text: string,
+    context?: { mealName?: string; kcalTarget?: number },
+  ): Promise<ParsedMealDraftItem[]> {
     await delay(600)
+    return mockParsedItems(text, context?.kcalTarget).map((item) => ({
+      foodName: item.foodName,
+      estimatedGrams: item.estimatedGrams,
+    }))
+  }
+
+  async parseMeal(text: string, context?: { mealName?: string; kcalTarget?: number }): Promise<ParsedFoodItem[]> {
+    const drafts = await this.extractMealItems(text, context)
+    try {
+      const resolved = await resolveParsedMealItems(drafts)
+      if (resolved.some((item) => item.foodId || (item.matchScore ?? 0) >= 0.75)) {
+        return resolved
+      }
+    } catch {
+      // Fall back to static mock nutrients when the catalog is unavailable.
+    }
     return mockParsedItems(text, context?.kcalTarget)
+  }
+
+  async extractDietImport(
+    _text: string,
+    mealWindows: Array<{ name: string; startHour: number; endHour: number }>,
+    options?: { dailyKcalTarget?: number; mealCountHint?: number },
+  ) {
+    await delay(800)
+    const perMeal = Math.round(
+      (options?.dailyKcalTarget ?? 2000) / Math.max(1, mealWindows.length),
+    )
+
+    return {
+      meals: mealWindows.map((window) => ({
+        name: window.name,
+        kcalTarget: perMeal,
+        items: mockMealItems(perMeal).map((item) => ({
+          foodName: item.foodName,
+          estimatedGrams: item.estimatedGrams,
+        })),
+      })),
+    }
+  }
+
+  async importDietPlan(
+    text: string,
+    mealWindows: Array<{ name: string; startHour: number; endHour: number }>,
+    options?: { dailyKcalTarget?: number; mealCountHint?: number },
+  ) {
+    return importDietPlanFromText({
+      text,
+      mealWindows,
+      dailyKcalTarget: options?.dailyKcalTarget,
+      mealCountHint: options?.mealCountHint,
+    })
   }
 
   async generateDietDraft(params: {
@@ -215,22 +272,6 @@ export class MockAIProvider implements AIProvider {
     }
 
     return { status: "ok", meals }
-  }
-
-  async importDietPlan(
-    _text: string,
-    mealWindows: Array<{ name: string; startHour: number; endHour: number }>,
-  ) {
-    await delay(800)
-    const perMeal = 500
-
-    return {
-      meals: mealWindows.map((window) => ({
-        name: window.name,
-        kcalTarget: perMeal,
-        items: mockMealItems(perMeal),
-      })),
-    }
   }
 
   async suggestSwap(params: {

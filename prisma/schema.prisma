@@ -277,3 +277,23 @@ model TBACFood {
   @@index([nutritionalRole])
   @@index([active])
 }
+
+// ──────────────────────────────────────────────
+// Recipe — Curated composite dishes for import/parse
+// ──────────────────────────────────────────────
+model Recipe {
+  id             String   @id @default(cuid())
+  name           String
+  normalizedName String?
+  synonyms       String[] @default([])
+  servingGrams   Float
+  kcalPer100g    Float
+  proteinPer100g Float
+  carbsPer100g   Float
+  fatPer100g     Float
+  fiberPer100g   Float?
+  active         Boolean  @default(true)
+
+  @@index([normalizedName])
+  @@index([active])
+}
